@@ -8,8 +8,8 @@ const skins = {
 	},
 
 	'Amen-Ra': {
-		'Dread Puppet': { speed: 4, hpPercent: 0.05, damageReduce:0.04 },
-		'Legendary Dread Puppet': { speed: 6, hpPercent: 0.08, damageReduce:0.04 },
+		'Dread Puppet': { speed: 4, hpPercent: 0.05, damageReduce: 0.04 },
+		'Legendary Dread Puppet': { speed: 6, hpPercent: 0.08, damageReduce: 0.04 },
 		'Monstrous Tribunal': { hpPercent: 0.03, attackPercent: 0.03, controlImmune: 0.05 },
 		'Legendary Monstrous Tribunal': { hpPercent: 0.06, attackPercent: 0.06, controlImmune: 0.06 },
 	},

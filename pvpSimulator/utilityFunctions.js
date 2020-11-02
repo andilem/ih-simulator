@@ -41,8 +41,7 @@ function rng(seed = 0) {
 	h ^= h >>> 16;
 	d = h >>> 0;
 
-
-	return function() {
+	return function () {
 		const t = b << 9;
 		let r = a * 5;
 
@@ -60,10 +59,11 @@ function rng(seed = 0) {
 
 
 // stack ids for buffs and debuffs
-var uniqID;
-function uuid() {
-	uniqID++;
-	return uniqID;
+{
+	let uniqID = 0;
+	function uuid() {
+		return uniqID++;
+	}
 }
 
 
@@ -98,109 +98,65 @@ function slotSort(heroA, heroB) {
 
 
 function isMonster(source) {
-	if ('_monsterName' in source) {
-		return true;
-	} else {
-		return false;
-	}
+	return '_monsterName' in source;
 }
 
 
-// eslint-disable-next-line no-unused-vars
-function isDispellable(strName) {
-	if (['Seal of Light', 'Power of Light', 'Ghost Possessed', 'Link of Souls',
+{
+	const arrNotDispellable = [
+		'Seal of Light', 'Power of Light', 'Ghost Possessed', 'Link of Souls',
 		'Demon Totem', 'Shrink', 'Shield', 'Feather Blade', 'Drake Break Defense',
-		'Wildfire Torch Dot', 'Revenging Wraith', 'Swordwind Shield'].includes(strName)) {
-		return false;
-	} else {
-		return true;
+		'Wildfire Torch Dot', 'Revenging Wraith', 'Swordwind Shield',
+	];
+
+	function isDispellable(strName) {
+		return !arrNotDispellable.includes(strName);
 	}
 }
 
 
-function isControlEffect(strName, effects = {}) {
-	if (['stun', 'petrify', 'freeze', 'twine', 'Silence', 'Seal of Light', 'Horrify', 'Shapeshift', 'Taunt', 'Dazzle'].includes(strName)) {
-		return true;
-	} else {
-		for (const e in effects) {
-			if (['burn', 'bleed', 'poison', 'dot', 'burnTrue', 'bleedTrue', 'poisonTrue'].includes(e)) {
-				return true;
+{
+	const arrControls = ['stun', 'petrify', 'freeze', 'twine', 'Silence', 'Seal of Light', 'Horrify', 'Shapeshift', 'Taunt', 'Dazzle'];
+
+	function isControlEffect(strName, effects = {}) {
+		if (arrControls.includes(strName)) {
+			return true;
+		} else {
+			for (const e in effects) {
+				if (arrControls.includes(e)) {
+					return true;
+				}
 			}
+			return false;
 		}
-
-		return false;
 	}
 }
 
 
-function isDot(strName, effects = {}) {
-	if (['Burn', 'Bleed', 'Poison', 'Dot', 'burn', 'bleed', 'poison', 'dot', 'Burn True', 'Bleed True', 'Poison True', 'burnTrue', 'bleedTrue', 'poisonTrue'].includes(strName)) {
-		return true;
-	} else {
-		for (const e in effects) {
-			if (['burn', 'bleed', 'poison', 'dot', 'burnTrue', 'bleedTrue', 'poisonTrue'].includes(e)) {
-				return true;
+{
+	const arrDots = [
+		'Burn', 'Bleed', 'Poison', 'Dot',
+		'burn', 'bleed', 'poison', 'dot',
+		'Burn True', 'Bleed True', 'Poison True',
+		'burnTrue', 'bleedTrue', 'poisonTrue',
+	];
+
+	function isDot(strName, effects = {}) {
+		if (arrDots.includes(strName)) {
+			return true;
+		} else {
+			for (const e in effects) {
+				if (arrDots.includes(e)) {
+					return true;
+				}
 			}
+			return false;
 		}
-
-		return false;
 	}
 }
 
 
-function isFrontLine(target, arrTargets) {
-	let frontCount = 0;
-	let backCount = 0;
-
-	for (var i = 0; i < 2; i++) {
-		if (arrTargets[i]._currentStats['totalHP'] > 0) {
-			frontCount++;
-		}
-	}
-
-	for (var i = 2; i < arrTargets.length; i++) {
-		if (arrTargets[i]._currentStats['totalHP'] > 0) {
-			backCount++;
-		}
-	}
-
-	if (frontCount > 0 && target._heroPos < 2) {
-		return true;
-	} else if (frontCount == 0 && target._heroPos >= 2) {
-		return true;
-	} else {
-		return false;
-	}
-}
-
-
-function isBackLine(target, arrTargets) {
-	let frontCount = 0;
-	let backCount = 0;
-
-	for (var i = 0; i < 2; i++) {
-		if (arrTargets[i]._currentStats['totalHP'] > 0) {
-			frontCount++;
-		}
-	}
-
-	for (var i = 2; i < arrTargets.length; i++) {
-		if (arrTargets[i]._currentStats['totalHP'] > 0) {
-			backCount++;
-		}
-	}
-
-	if (backCount > 0 && target._heroPos >= 2) {
-		return true;
-	} else if (backCount == 0 && target._heroPos < 2) {
-		return true;
-	} else {
-		return false;
-	}
-}
-
-
-function isAttribute(strName, effects = {}) {
+{
 	const arrAttributes = [
 		'attack', 'attackPercent', 'armor', 'armorPercent', 'hp', 'hpPercent', 'speed',
 		'energy', 'precision', 'block', 'crit', 'critDamage', 'holyDamage', 'armorBreak',
@@ -215,36 +171,48 @@ function isAttribute(strName, effects = {}) {
 		'damageAgainstPriest',
 	];
 
-	if (arrAttributes.includes(strName)) {
-		return true;
-	} else {
-		for (const e in effects) {
-			if (arrAttributes.includes(e)) {
-				return true;
+	function isAttribute(strName, effects = {}) {
+		if (arrAttributes.includes(strName)) {
+			return true;
+		} else {
+			for (const e in effects) {
+				if (arrAttributes.includes(e)) {
+					return true;
+				}
 			}
+			return false;
 		}
-
-		return false;
 	}
 }
 
 
-function getFrontTargets(source, arrTargets) {
-	let copyTargets = [];
+function isFrontLine(target, arrTargets) {
+	return target._heroPos < 2 || !arrTargets[0].alive && !arrTargets[1].alive;
+}
 
-	copyTargets = getTauntedTargets(source, arrTargets);
+
+function isBackLine(target, arrTargets) {
+	return target._heroPos > 1
+		|| !arrTargets[2].alive
+		&& !arrTargets[3].alive
+		&& !arrTargets[4].alive
+		&& !arrTargets[5].alive;
+}
+
+
+function getFrontTargets(source, arrTargets) {
+	const copyTargets = getTauntedTargets(source, arrTargets);
 	if (copyTargets.length > 0) { return copyTargets; }
 
-	if (arrTargets[0]._currentStats['totalHP'] > 0) {
-		copyTargets.push(arrTargets[0]);
-	}
-	if (arrTargets[1]._currentStats['totalHP'] > 0) {
-		copyTargets.push(arrTargets[1]);
+	for (var h = 0; h < 2; h++) {
+		if (arrTargets[h].alive) {
+			copyTargets.push(arrTargets[h]);
+		}
 	}
 
 	if (copyTargets.length == 0) {
 		for (let h = 2; h < arrTargets.length; h++) {
-			if (arrTargets[h]._currentStats['totalHP'] > 0) {
+			if (arrTargets[h].alive) {
 				copyTargets.push(arrTargets[h]);
 			}
 		}
@@ -255,20 +223,18 @@ function getFrontTargets(source, arrTargets) {
 
 
 function getBackTargets(source, arrTargets) {
-	let copyTargets = [];
-
-	copyTargets = getTauntedTargets(source, arrTargets);
+	const copyTargets = getTauntedTargets(source, arrTargets);
 	if (copyTargets.length > 0) { return copyTargets; }
 
 	for (var h = 2; h < arrTargets.length; h++) {
-		if (arrTargets[h]._currentStats['totalHP'] > 0) {
+		if (arrTargets[h].alive) {
 			copyTargets.push(arrTargets[h]);
 		}
 	}
 
 	if (copyTargets.length == 0) {
 		for (var h = 0; h < 2; h++) {
-			if (arrTargets[h]._currentStats['totalHP'] > 0) {
+			if (arrTargets[h].alive) {
 				copyTargets.push(arrTargets[h]);
 			}
 		}
@@ -278,239 +244,133 @@ function getBackTargets(source, arrTargets) {
 }
 
 
-function getAllTargets(source, arrTargets, num = 6) {
-	let copyTargets = [];
-	let count = 0;
-
-	copyTargets = getTauntedTargets(source, arrTargets, num);
-	if (copyTargets.length > 0) { return copyTargets; }
-
-	for (const i in arrTargets) {
-		if (arrTargets[i]._currentStats['totalHP'] > 0) {
-			copyTargets.push(arrTargets[i]);
-			count++;
-		}
-
-		if (count == num) { break; }
-	}
-
-	return copyTargets;
+function getAllTargets(source, arrTargets) {
+	return getSortedTargets(source, arrTargets, null);
 }
 
 
 function getNearestTargets(source, arrTargets, num = 6) {
-	let copyTargets = [];
-	const copyTargets2 = [];
-	let count = 0;
-
-	copyTargets = getTauntedTargets(source, arrTargets, num);
-	if (copyTargets.length > 0) { return copyTargets; }
-
-	for (var i in arrTargets) {
-		if (arrTargets[i]._currentStats['totalHP'] > 0) {
-			arrTargets[i]._rng = Math.abs(source._heroPos - arrTargets[i]._heroPos);
-			copyTargets.push(arrTargets[i]);
-		}
-	}
-
-	copyTargets.sort(function(a, b) {
-		if (a._rng == 0) {
-			return 1;
-		} else if (b._rng == 0) {
-			return -1;
-		} else if (a._rng > b._rng) {
-			return 1;
-		} else if (a._rng < b._rng) {
-			return -1;
-		} else if (a._heroPos > b._heroPos) {
-			return 1;
-		} else if (a._heroPos < b._heroPos) {
-			return -1;
-		} else {
-			return 0;
-		}
-	});
-
-	for (var i in copyTargets) {
-		copyTargets2.push(copyTargets[i]);
-		count++;
-		if (count == num) { break; }
-	}
-
-	return copyTargets2;
-}
-
-
-function getRandomTargets(source, arrTargets, num = 6, dazzleBypass = false) {
-	let copyTargets = [];
-	const copyTargets2 = [];
-	let count = 0;
-
-	if (!(dazzleBypass)) {
-		copyTargets = getTauntedTargets(source, arrTargets, num);
-	}
-	if (copyTargets.length > 0) { return copyTargets; }
-
-	for (var i in arrTargets) {
-		if (arrTargets[i]._currentStats['totalHP'] > 0) {
-			arrTargets[i]._rng = random();
-			copyTargets.push(arrTargets[i]);
-		}
-	}
-
-	copyTargets.sort(function(a, b) {
-		if (a._rng > b._rng) {
-			return 1;
-		} else if (a._rng < b._rng) {
-			return -1;
-		} else {
-			return 0;
-		}
-	});
-
-	for (var i in copyTargets) {
-		copyTargets2.push(copyTargets[i]);
-		count++;
-		if (count == num) { break; }
-	}
-
-	return copyTargets2;
+	return getSortedTargets(source, arrTargets, (a, b) => {
+		const dA = Math.abs(source._heroPos - a._heroPos);
+		const dB = Math.abs(source._heroPos - b._heroPos);
+		return dA > dB ? 1 : dA < dB ? -1 : a._heroPos - b._heroPos;
+	}, num);
 }
 
 
 function getLowestHPTargets(source, arrTargets, num = 6) {
 	// get living targets with lowest current HP
-	let copyTargets = [];
-	const copyTargets2 = [];
-	let count = 0;
-
-	copyTargets = getTauntedTargets(source, arrTargets, num);
-	if (copyTargets.length > 0) { return copyTargets; }
-
-	for (var i in arrTargets) {
-		if (arrTargets[i]._currentStats['totalHP'] > 0) {
-			copyTargets.push(arrTargets[i]);
-		}
-	}
-
-	copyTargets.sort(function(a, b) {
-		if (a._currentStats['totalHP'] > b._currentStats['totalHP']) {
-			return 1;
-		} else if (a._currentStats['totalHP'] < b._currentStats['totalHP']) {
-			return -1;
-		} else if (a._heroPos < b._heroPos) {
-			return -1;
-		} else {
-			return 1;
-		}
-	});
-
-	for (var i in copyTargets) {
-		copyTargets2.push(copyTargets[i]);
-		count++;
-		if (count == num) { break; }
-	}
-
-	return copyTargets2;
+	return getSortedTargets(source, arrTargets,
+		(a, b) => a._currentStats.totalHP > b._currentStats.totalHP ? 1 : a._currentStats.totalHP < b._currentStats.totalHP ? -1 : a._heroPos - b._heroPos,
+		num);
 }
 
 
 function getLowestHPPercentTargets(source, arrTargets, num = 6) {
 	// get living targets with lowest current HP percent
-	let copyTargets = [];
-	const copyTargets2 = [];
-	let count = 0;
-
-	copyTargets = getTauntedTargets(source, arrTargets, num);
-	if (copyTargets.length > 0) { return copyTargets; }
-
-	for (var i in arrTargets) {
-		if (arrTargets[i]._currentStats['totalHP'] > 0) {
-			copyTargets.push(arrTargets[i]);
-		}
-	}
-
-	copyTargets.sort(function(a, b) {
-		if (a._currentStats['totalHP'] / a._stats['totalHP'] > b._currentStats['totalHP'] / b._stats['totalHP']) {
-			return 1;
-		} else if (a._currentStats['totalHP'] / a._stats['totalHP'] < b._currentStats['totalHP'] / b._stats['totalHP']) {
-			return -1;
-		} else if (a._heroPos < b._heroPos) {
-			return -1;
-		} else {
-			return 1;
-		}
-	});
-
-	for (var i in copyTargets) {
-		copyTargets2.push(copyTargets[i]);
-		count++;
-		if (count == num) { break; }
-	}
-
-	return copyTargets2;
+	return getSortedTargets(source, arrTargets, (a, b) => {
+		const pA = a._currentStats.totalHP / a._stats.totalHP;
+		const pB = b._currentStats.totalHP / b._stats.totalHP;
+		return pA > pB ? 1 : pA < pB ? -1 : a._heroPos - b._heroPos;
+	}, num);
 }
 
 
 function getHighestHPTargets(source, arrTargets, num = 6) {
 	// get living target with highest current HP
-	let copyTargets = [];
-	const copyTargets2 = [];
-	let count = 0;
-
-	copyTargets = getTauntedTargets(source, arrTargets, num);
-	if (copyTargets.length > 0) { return copyTargets; }
-
-	for (var i in arrTargets) {
-		if (arrTargets[i]._currentStats['totalHP'] > 0) {
-			copyTargets.push(arrTargets[i]);
-		}
-	}
-
-	copyTargets.sort(function(a, b) {
-		if (a._currentStats['totalHP'] > b._currentStats['totalHP']) {
-			return -1;
-		} else if (a._currentStats['totalHP'] < b._currentStats['totalHP']) {
-			return 1;
-		} else if (a._heroPos < b._heroPos) {
-			return -1;
-		} else {
-			return 1;
-		}
-	});
-
-	for (var i in copyTargets) {
-		copyTargets2.push(copyTargets[i]);
-		count++;
-		if (count == num) { break; }
-	}
-
-	return copyTargets2;
+	return getSortedTargets(source, arrTargets,
+		(a, b) => a._currentStats.totalHP > b._currentStats.totalHP ? - 1 : a._currentStats.totalHP < b._currentStats.totalHP ? 1 : a._heroPos - b._heroPos,
+		num);
 }
 
 
-function getTauntedTargets(source, arrTargets, num = 6) {
-	const copyTargets = [];
+function getHighestAttackTargets(source, arrTargets, num = 6) {
+	// get living target with highest current attack
+	return getSortedTargets(source, arrTargets,
+		(a, b) => a._currentStats.totalAttack > b._currentStats.totalAttack ? - 1 : a._currentStats.totalAttack < b._currentStats.totalAttack ? 1 : a._heroPos - b._heroPos,
+		num);
+}
 
-	if (!(isMonster(source)) && arrTargets.length > 0) {
-		if (!(source._attOrDef == arrTargets[0]._attOrDef)) {
-			if ('Dazzle' in source._debuffs) {
-				return getRandomTargets(source, source._enemies, 1, true);
-			} else if ('Taunt' in source._debuffs) {
-				for (const i in source._enemies) {
-					if (source._enemies[i]._heroName == 'UniMax-3000' && source._enemies[i]._currentStats['totalHP'] > 0) {
-						copyTargets.push(source._enemies[i]);
-					}
-				}
-			}
+
+function getSortedTargets(source, arrTargets, sort, num = 6) {
+	const targets = getTauntedTargets(source, arrTargets, num);
+	if (targets.length > 0) return targets;
+
+	for (const t of arrTargets) {
+		if (t.alive) {
+			targets.push(t);
 		}
 	}
 
+	if (sort) targets.sort(sort);
+	if (targets.length > num) targets.length = num;
+	return targets;
+}
+
+
+function getRandomTargets(source, arrTargets, num = 6, dazzleBypass = false) {
+	if (!dazzleBypass) {
+		const tauntedTargets = getTauntedTargets(source, arrTargets, num);
+		if (tauntedTargets.length > 0) {
+			return tauntedTargets;
+		}
+	}
+
+	const copyTargets = [];
+	for (const t of arrTargets) {
+		if (t.alive) {
+			copyTargets.push(t);
+		}
+	}
+	if (copyTargets.length <= num) return copyTargets;
+	shuffle(copyTargets, num);
+	copyTargets.length = num;
 	return copyTargets;
 }
 
 
-var translate = {
+function getTauntedTargets(source, arrTargets, num = 6) {
+	if (isMonster(source) || source._attOrDef == arrTargets[0]._attOrDef) {
+		return [];
+	}
+
+	if ('Taunt' in source._debuffs) {
+		// find first living "taunter"
+		for (const stack in source._debuffs.Taunt) {
+			const h = source._debuffs.Taunt[stack].source;
+			if (h.alive) return [h];
+		}
+	}
+
+	if ('Dazzle' in source._debuffs) {
+		return getRandomTargets(source, arrTargets, 1, true);
+	}
+
+	return [];
+}
+
+
+/**
+ * Shuffles an array in place.
+ * @param {Array} a array containing the items.
+ * @param {Number} n number of items to shuffle or -1 for all items.
+ */
+function shuffle(a, n = -1) {
+	const l = a.length;
+	if (n == -1 || n >= l) {
+		n = l - 1; // no need to shuffle the last element, it will be the last remaining
+	}
+	for (var i = 0; i < n; i++) {
+		const j = i + Math.floor(random() * (l - i));
+		const x = a[i];
+		a[i] = a[j];
+		a[j] = x;
+	}
+	return a;
+}
+
+
+const translate = {
 	'hp': 'Pre-Multiplier HP',
 	'attack': 'Pre-Multiplier Attack',
 	'armor': 'Pre-Multiplier Armor',
@@ -600,40 +460,3 @@ var translate = {
 	'reflectAmount': 'Link Damage Tracker',
 	'damageAgainstStun': 'Damage Dealt to Stunned Targets',
 };
-
-
-function getHighestAttackTargets(source, arrTargets, num = 6) {
-	// get living target with highest current attack
-	let copyTargets = [];
-	const copyTargets2 = [];
-	let count = 0;
-
-	copyTargets = getTauntedTargets(source, arrTargets, num);
-	if (copyTargets.length > 0) { return copyTargets; }
-
-	for (const t of arrTargets) {
-		if (t._currentStats.totalHP > 0) {
-			copyTargets.push(t);
-		}
-	}
-
-	copyTargets.sort(function(a, b) {
-		if (a._currentStats.totalAttack > b._currentStats.totalAttack) {
-			return -1;
-		} else if (a._currentStats.totalAttack < b._currentStats.totalAttack) {
-			return 1;
-		} else if (a._heroPos < b._heroPos) {
-			return -1;
-		} else {
-			return 1;
-		}
-	});
-
-	for (const t of copyTargets) {
-		copyTargets2.push(t);
-		count++;
-		if (count == num) { break; }
-	}
-
-	return copyTargets2;
-}

@@ -1,0 +1,5 @@
+- Revenging Wraith wrongly implemented
+- Revenging Wraith kill effect only when killed by RW?
+- Is there still only one roll for crit AND block?
+- hero.getBuff: why heal directly?
+- hero.getDebuff: why take dot damage?

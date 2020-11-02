@@ -578,8 +578,8 @@ class Belrain extends hero {
 
 // Carrie
 class Carrie extends hero {
-	constructor(sHeroName, iHeroPos, attOrDef) {
-		super(sHeroName, iHeroPos, attOrDef);
+	constructor(...args) {
+		super(...args);
 		this._stats['revive'] = 1;
 		this._stats['spiritPowerStacks'] = 0;
 	}
@@ -1015,7 +1015,7 @@ class Delacium extends hero {
 			if (validDebuffs.length < maxToCopy) { maxToCopy = validDebuffs.length; }
 			if (targets.length < maxTargets) { maxTargets = targets.length; }
 
-			validDebuffs.sort(function(a, b) {
+			validDebuffs.sort(function (a, b) {
 				if (a[2] > b[2]) {
 					return 1;
 				} else {
@@ -1226,8 +1226,8 @@ class Elyvia extends hero {
 
 // Emily
 class Emily extends hero {
-	constructor(sHeroName, iHeroPos, attOrDef) {
-		super(sHeroName, iHeroPos, attOrDef);
+	constructor(...args) {
+		super(...args);
 		this._stats['courageousTriggered'] = 0;
 	}
 
@@ -1502,8 +1502,8 @@ class FaithBlade extends hero {
 
 // Gustin
 class Gustin extends hero {
-	constructor(sHeroName, iHeroPos, attOrDef) {
-		super(sHeroName, iHeroPos, attOrDef);
+	constructor(...args) {
+		super(...args);
 		this._stats['linkCount'] = 0;
 		this._stats['reflectAmount'] = 0;
 	}
@@ -1619,7 +1619,7 @@ class Gustin extends hero {
 						}
 					}
 
-					listDebuffs.sort(function(a, b) {
+					listDebuffs.sort(function (a, b) {
 						if (a[1] < b[1]) {
 							return true;
 						} else {
@@ -1703,8 +1703,8 @@ class Gustin extends hero {
 
 // Horus
 class Horus extends hero {
-	constructor(sHeroName, iHeroPos, attOrDef) {
-		super(sHeroName, iHeroPos, attOrDef);
+	constructor(...args) {
+		super(...args);
 		this._stats['blockCount'] = 0;
 	}
 
@@ -1767,7 +1767,7 @@ class Horus extends hero {
 	eventEnemyActive() {
 		let result = '';
 		result += this.getBuff(this, 'Attack Percent', 15, { attackPercent: 0.05 });
-		result += this.getBuff(this, 'Crit Damage', 15, { critDamage:0.02 });
+		result += this.getBuff(this, 'Crit Damage', 15, { critDamage: 0.02 });
 		return result;
 	}
 
@@ -2036,8 +2036,8 @@ class Ithaqua extends hero {
 
 // Kroos
 class Kroos extends hero {
-	constructor(sHeroName, iHeroPos, attOrDef) {
-		super(sHeroName, iHeroPos, attOrDef);
+	constructor(...args) {
+		super(...args);
 		this._stats['flameInvasionTriggered'] = 0;
 	}
 
@@ -2126,8 +2126,8 @@ class Kroos extends hero {
 
 // Michelle
 class Michelle extends hero {
-	constructor(sHeroName, iHeroPos, attOrDef) {
-		super(sHeroName, iHeroPos, attOrDef);
+	constructor(...args) {
+		super(...args);
 		this._stats['revive'] = 1;
 	}
 
@@ -2679,9 +2679,9 @@ class Penny extends hero {
 					result += '<div>' + this.heroDesc() + ' resisted debuff <span class=\'skill\'>' + debuffName + '</span>.</div>';
 				} else if (
 					isControl &&
-          (rollCCPen >= controlImmune || !(bypassControlImmune))
-          && this._artifact.includes(' Lucky Candy Bar') &&
-          (this._currentStats['firstCC'] == '' || this._currentStats['firstCC'] == debuffName)
+					(rollCCPen >= controlImmune || !(bypassControlImmune))
+					&& this._artifact.includes(' Lucky Candy Bar') &&
+					(this._currentStats['firstCC'] == '' || this._currentStats['firstCC'] == debuffName)
 				) {
 					this._currentStats['firstCC'] = debuffName;
 					result += '<div>' + this.heroDesc() + ' resisted debuff <span class=\'skill\'>' + debuffName + '</span> using <span class=\'skill\'>' + this._artifact + '</span>.</div>';
@@ -2759,8 +2759,8 @@ class Penny extends hero {
 
 // Sherlock
 class Sherlock extends hero {
-	constructor(sHeroName, iHeroPos, attOrDef) {
-		super(sHeroName, iHeroPos, attOrDef);
+	constructor(...args) {
+		super(...args);
 		this._stats['wellCalculatedStacks'] = 3;
 	}
 
@@ -2815,7 +2815,7 @@ class Sherlock extends hero {
 		if (targets.length > 0) {
 			if (targets[0]._currentStats['totalHP'] > this._currentStats['totalHP']) {
 				let swapAmount = targets[0]._currentStats['totalHP'] - this._currentStats['totalHP'];
-				if (swapAmount > this._currentStats['totalAttack'] * 50) { swapAmount = Math.floor(this._currentStats['totalAttack'] * 50);}
+				if (swapAmount > this._currentStats['totalAttack'] * 50) { swapAmount = Math.floor(this._currentStats['totalAttack'] * 50); }
 
 				this._currentStats['totalHP'] += swapAmount;
 				targets[0]._currentStats['totalHP'] -= swapAmount;
@@ -2834,7 +2834,7 @@ class Sherlock extends hero {
 	endOfRound(roundNum) {
 		let result = '';
 
-		if(random() < 0.5) {
+		if (random() < 0.5) {
 			result = '<div>' + this.heroDesc() + ' gained <span class=\'num\'>2</span> stacks of <span class=\'skill\'>Well-Calculated</span>.</div>';
 			this._currentStats['wellCalculatedStacks'] += 2;
 		} else {
@@ -3388,8 +3388,8 @@ class Drake extends hero {
 
 // Russell
 class Russell extends hero {
-	constructor(sHeroName, iHeroPos, attOrDef) {
-		super(sHeroName, iHeroPos, attOrDef);
+	constructor(...args) {
+		super(...args);
 		this._stats['isCharging'] = false;
 	}
 
@@ -3659,8 +3659,8 @@ class Valkryie extends hero {
 
 // Ormus
 class Ormus extends hero {
-	constructor(sHeroName, iHeroPos, attOrDef) {
-		super(sHeroName, iHeroPos, attOrDef);
+	constructor(...args) {
+		super(...args);
 		this._stats['heartOfOrmusTriggered'] = false;
 	}
 
@@ -3771,7 +3771,7 @@ class Ormus extends hero {
 class Rogan extends hero {
 	passiveStats() {
 		// apply Wolfish Blood passive
-		this.applyStatChange({ attackPercent:0.30, hpPercent: 0.25, critDamage: 0.40, damageReduce: 0.30, speed: 60 }, 'PassiveStats');
+		this.applyStatChange({ attackPercent: 0.30, hpPercent: 0.25, critDamage: 0.40, damageReduce: 0.30, speed: 60 }, 'PassiveStats');
 	}
 
 
@@ -4019,8 +4019,8 @@ class Gerke extends hero {
 
 // Sleepless
 class Sleepless extends hero {
-	constructor(sHeroName, iHeroPos, attOrDef) {
-		super(sHeroName, iHeroPos, attOrDef);
+	constructor(...args) {
+		super(...args);
 		this._stats['revive'] = 1;
 	}
 
@@ -4103,7 +4103,7 @@ class Sleepless extends hero {
 	doActive() {
 		let result = '';
 		let damageResult = {};
-		const targets = getAllTargets(this, this._enemies, 6);
+		const targets = getAllTargets(this, this._enemies);
 		let targetLock;
 
 		for (const i in targets) {

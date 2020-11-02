@@ -1,20 +1,25 @@
-var attHeroes = [
-	new hero('None', 0, 'att'),
-	new hero('None', 1, 'att'),
-	new hero('None', 2, 'att'),
-	new hero('None', 3, 'att'),
-	new hero('None', 4, 'att'),
-	new hero('None', 5, 'att'),
-];
+const attTeam = {
+	heroes: [],
+	monster: null,
+	tech: {},
+	frame: null,
+	statues: {}
+}
+const attHeroes = attTeam.heroes;
 
-var defHeroes = [
-	new hero('None', 0, 'def'),
-	new hero('None', 1, 'def'),
-	new hero('None', 2, 'def'),
-	new hero('None', 3, 'def'),
-	new hero('None', 4, 'def'),
-	new hero('None', 5, 'def'),
-];
+const defTeam = {
+	heroes: [],
+	monster: null,
+	tech: {},
+	frame: null,
+	statues: {}
+}
+const defHeroes = defTeam.heroes;
+
+for (let i = 0; i < 6; i++) {
+	attHeroes[i] = new hero('None', i, 'att', attTeam, defTeam);
+	defHeroes[i] = new hero('None', i, 'def', defTeam, attTeam);
+}
 
 const lsPrefix = 'pvp_';
 
@@ -23,9 +28,9 @@ function initialize() {
 	// layout stuff
 	var acc = document.getElementsByClassName('colorA');
 	for (var i = 0; i < acc.length; i++) {
-		acc[i].addEventListener('click', function() {
+		acc[i].addEventListener('click', function () {
 			/* Toggle between adding and removing the "active" class,
-      to highlight the button that controls the panel */
+	  to highlight the button that controls the panel */
 			this.classList.toggle('activeA');
 
 			/* Toggle between hiding and showing the active panel */
@@ -40,7 +45,7 @@ function initialize() {
 
 	var acc = document.getElementsByClassName('colorB');
 	for (var i = 0; i < acc.length; i++) {
-		acc[i].addEventListener('click', function() {
+		acc[i].addEventListener('click', function () {
 			this.classList.toggle('activeB');
 
 			const panel = this.nextElementSibling;
@@ -54,7 +59,7 @@ function initialize() {
 
 	var acc = document.getElementsByClassName('colorC');
 	for (var i = 0; i < acc.length; i++) {
-		acc[i].addEventListener('click', function() {
+		acc[i].addEventListener('click', function () {
 			this.classList.toggle('activeC');
 
 			const panel = this.nextElementSibling;
@@ -67,7 +72,7 @@ function initialize() {
 	}
 
 	// When the user scrolls down 20px from the top of the document, show the button
-	window.onscroll = function() {
+	window.onscroll = function () {
 		if (document.body.scrollTop > 600 || document.documentElement.scrollTop > 600) {
 			document.getElementById('topButton').style.display = 'block';
 		} else {
@@ -87,7 +92,7 @@ function initialize() {
 
 	let option;
 
-	for(var x in avatarFrames) {
+	for (var x in avatarFrames) {
 		option = document.createElement('option');
 		option.text = x;
 		document.getElementById('attAvatarFrame').add(option);
@@ -97,7 +102,7 @@ function initialize() {
 		document.getElementById('defAvatarFrame').add(option);
 	}
 
-	for(var x in baseMonsterStats) {
+	for (var x in baseMonsterStats) {
 		option = document.createElement('option');
 		option.text = x;
 		document.getElementById('attMonster').add(option);
@@ -219,14 +224,14 @@ function topFunction() {
 function addOptions(dictItems, strPostfix) {
 	let option;
 
-	for(const x in dictItems) {
-		for(i = 0; i < attHeroes.length; i++) {
+	for (const x in dictItems) {
+		for (i = 0; i < attHeroes.length; i++) {
 			option = document.createElement('option');
 			option.text = x;
 			document.getElementById('attHero' + i + strPostfix).add(option);
 		}
 
-		for(i = 0; i < defHeroes.length; i++) {
+		for (i = 0; i < defHeroes.length; i++) {
 			option = document.createElement('option');
 			option.text = x;
 			document.getElementById('defHero' + i + strPostfix).add(option);
@@ -236,12 +241,9 @@ function addOptions(dictItems, strPostfix) {
 
 
 function changeHero(heroPos, prefix, skipUpdates = false) {
-	let arrToUse = [];
-	if (prefix == 'att') {
-		arrToUse = attHeroes;
-	} else {
-		arrToUse = defHeroes;
-	}
+	const myTeam = prefix == 'att' ? attTeam : defTeam;
+	const otherTeam = prefix == 'att' ? defTeam : attTeam;
+	const arrToUse = myTeam.heroes;
 
 	const pHeroName = arrToUse[heroPos]._heroName;
 	const cHeroName = document.getElementById(prefix + 'Hero' + heroPos + 'Name').value;
@@ -259,28 +261,23 @@ function changeHero(heroPos, prefix, skipUpdates = false) {
 			cHeroSkins.remove(i);
 		}
 
-		if(cHeroName == 'None') {
-			arrToUse[heroPos] = new hero('None', heroPos, prefix);
+		if (cHeroName == 'None') {
+			arrToUse[heroPos] = new hero('None', heroPos, prefix, myTeam, otherTeam);
 			cHeroSheet.innerHTML = '';
 		} else {
-			arrToUse[heroPos] = new baseHeroStats[cHeroName]['className'](cHeroName, heroPos, prefix);
+			arrToUse[heroPos] = new baseHeroStats[cHeroName]['className'](cHeroName, heroPos, prefix, myTeam, otherTeam);
 
-			if ([cHeroName] in skins) {
-				let option;
-				for(const x in skins[cHeroName]) {
-					option = document.createElement('option');
+			if (cHeroName in skins) {
+				for (const x in skins[cHeroName]) {
+					const option = document.createElement('option');
 					option.text = x;
 					cHeroSkins.add(option);
 				}
 			}
 		}
 
-		if (skipUpdates == false) {
-			if (prefix == 'att') {
-				updateAttackers();
-			} else {
-				updateDefenders();
-			}
+		if (!skipUpdates) {
+			updateTeam(prefix);
 		}
 	}
 }
@@ -288,17 +285,11 @@ function changeHero(heroPos, prefix, skipUpdates = false) {
 
 function updateHero(heroPos, prefix) {
 	const cHeroName = document.getElementById(prefix + 'Hero' + heroPos + 'Name').value;
-	const cHeroSheet = document.getElementById(prefix + 'Hero' + heroPos + 'Sheet');
-	let arrToUse = [];
 
 	if (cHeroName != 'None') {
 		console.log('updateHero ' + heroPos + ': ' + cHeroName);
 
-		if (prefix == 'att') {
-			arrToUse = attHeroes;
-		} else {
-			arrToUse = defHeroes;
-		}
+		const arrToUse = prefix == 'att' ? attHeroes : defHeroes;
 
 		arrToUse[heroPos]._heroLevel = document.getElementById(prefix + 'Hero' + heroPos + 'Level').value;
 
@@ -317,22 +308,48 @@ function updateHero(heroPos, prefix) {
 		arrToUse[heroPos]._enable5 = document.getElementById(prefix + 'Hero' + heroPos + 'Enable5').value;
 
 		arrToUse[heroPos].updateCurrentStats();
+		const cHeroSheet = document.getElementById(prefix + 'Hero' + heroPos + 'Sheet');
 		cHeroSheet.innerHTML = arrToUse[heroPos].getHeroSheet();
 	}
 }
 
 
-function updateAttackers() {
-	for (let i = 0; i < attHeroes.length; i++) {
-		updateHero(i, 'att');
+function updateTeam(prefix) {
+	const myTeam = prefix == 'att' ? attTeam : defTeam;
+	const otherTeam = prefix == 'att' ? defTeam : attTeam;
+
+	const monsterName = document.getElementById(prefix + 'Monster').value;
+	myTeam.monster = new baseMonsterStats[monsterName]['className'](monsterName, prefix, myTeam, otherTeam);
+
+	for (const cls in guildTech) {
+		myTeam.tech[cls] = {};
+		for (const name in guildTech[cls]) {
+			myTeam.tech[cls][name] = document.getElementById(prefix + 'Tech' + cls + name).value;
+		}
+	}
+
+	myTeam.frame = avatarFrames[document.getElementById(prefix + 'AvatarFrame').value];
+
+	for (const type of ['Holy', 'Evil']) {
+		myTeam.statues[type] = {};
+		for (const name of ['speed', 'hpPercent', 'attackPercent']) {
+			myTeam.statues[type][name] = document.getElementById(prefix + type + name).value;
+		}
+	}
+
+	for (let i = 0; i < myTeam.heroes.length; i++) {
+		updateHero(i, prefix);
 	}
 }
 
 
+function updateAttackers() {
+	updateTeam('att');
+}
+
+
 function updateDefenders() {
-	for (let i = 0; i < defHeroes.length; i++) {
-		updateHero(i, 'def');
-	}
+	updateTeam('def');
 }
 
 
@@ -398,6 +415,5 @@ function loadConfig() {
 
 
 function genSeed() {
-	const dt = new Date();
-	document.getElementById('domSeed').value = dt.valueOf().toString();
+	document.getElementById('domSeed').value = new Date().valueOf().toString();
 }

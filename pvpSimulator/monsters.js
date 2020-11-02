@@ -1,16 +1,10 @@
 class monster {
-	constructor(sMonsterName, attOrDef) {
+	constructor(sMonsterName, attOrDef, myTeam, otherTeam) {
 		this._monsterName = sMonsterName;
 		this._attOrDef = attOrDef;
 		this._heroClass = 'monster';
-
-		if (attOrDef == 'att') {
-			this._allies = attHeroes;
-			this._enemies = defHeroes;
-		} else {
-			this._allies = defHeroes;
-			this._enemies = attHeroes;
-		}
+		this._allies = myTeam.heroes;
+		this._enemies = otherTeam.heroes;
 
 		this._currentStats = {
 			'damageDealt': 0,
@@ -29,11 +23,11 @@ class monster {
 
 	calcDamage(target, attackDamage, damageSource, damageType) {
 		let damageAmount = attackDamage;
-		const allDamageReduce = target._currentStats['allDamageReduce'];
+		const allDamageReduce = target._currentStats.allDamageReduce;
 		let dotReduce = 0;
 
 		if (isDot(damageType)) {
-			dotReduce = target._currentStats['dotReduce'];
+			dotReduce = target._currentStats.dotReduce;
 		}
 
 		damageAmount = Math.floor(damageAmount * (1 - allDamageReduce) * (1 - dotReduce));
@@ -49,7 +43,7 @@ class monster {
 
 
 	calcHeal(target, healAmount) {
-		let effectBeingHealed = 1 + target._currentStats['effectBeingHealed'];
+		let effectBeingHealed = 1 + target._currentStats.effectBeingHealed;
 		if (effectBeingHealed < 0) { effectBeingHealed = 0; }
 
 		return Math.floor(healAmount * effectBeingHealed);
@@ -86,7 +80,7 @@ class mDyne extends monster {
 			result += targets[i].getBuff(this, 'Armor Percent', 2, { armorPercent: 0.37 });
 			result += targets[i].getBuff(this, 'Attack Percent', 2, { attackPercent: 0.15 });
 
-			healAmount = this.calcHeal(targets[i], targets[i]._stats['totalHP'] * 0.2);
+			healAmount = this.calcHeal(targets[i], targets[i]._stats.totalHP * 0.2);
 			result += targets[i].getHeal(this, healAmount);
 		}
 
@@ -108,7 +102,7 @@ class mFenlier extends monster {
 			result += targets[i].takeDamage(this, 'Violent Bite', damageResult);
 
 			damageResult = this.calcDamage(targets[i], 559177, 'monster', 'bleedTrue');
-			result += targets[i].getDebuff(this, 'Bleed True', 3, { bleedTrue: damageResult['damageAmount'] }, false, 'monster');
+			result += targets[i].getDebuff(this, 'Bleed True', 3, { bleedTrue: damageResult.damageAmount }, false, 'monster');
 		}
 
 
@@ -183,7 +177,7 @@ class mJormangund extends monster {
 			result += targets[i].takeDamage(this, 'Toxic Track', damageResult);
 
 			damageResult = this.calcDamage(targets[i], 548328, 'monster', 'poisonTrue');
-			result += targets[i].getDebuff(this, 'Poison', 3, { poisonTrue: damageResult['damageAmount'] }, false, 'monster');
+			result += targets[i].getDebuff(this, 'Poison', 3, { poisonTrue: damageResult.damageAmount }, false, 'monster');
 		}
 
 
@@ -234,7 +228,7 @@ class mPhoenix extends monster {
 			result += targets[i].takeDamage(this, 'Blazing Spirit', damageResult);
 
 			damageResult = this.calcDamage(targets[i], 363465, 'monster', 'burnTrue');
-			result += targets[i].getDebuff(this, 'Burn True', 3, { burnTrue: damageResult['damageAmount'] }, false, 'monster');
+			result += targets[i].getDebuff(this, 'Burn True', 3, { burnTrue: damageResult.damageAmount }, false, 'monster');
 		}
 
 
