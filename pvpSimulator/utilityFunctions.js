@@ -1,6 +1,6 @@
 // eslint-disable-next-line no-unused-vars
 function formatNum(num) {
-	return '<span class =\'num\'>' + num.toLocaleString() + '</span>';
+	return '<span class =\'num\'>' + num + '</span>';
 }
 
 
@@ -293,6 +293,9 @@ function getHighestAttackTargets(source, arrTargets, num = 6) {
 
 
 function getSortedTargets(source, arrTargets, sort, num = 6) {
+	if (arrTargets.length == 0) {
+		return [];
+	}
 	const targets = getTauntedTargets(source, arrTargets, num);
 	if (targets.length > 0) return targets;
 
@@ -309,6 +312,9 @@ function getSortedTargets(source, arrTargets, sort, num = 6) {
 
 
 function getRandomTargets(source, arrTargets, num = 6, dazzleBypass = false) {
+	if (arrTargets.length == 0) {
+		return [];
+	}
 	if (!dazzleBypass) {
 		const tauntedTargets = getTauntedTargets(source, arrTargets, num);
 		if (tauntedTargets.length > 0) {
@@ -330,7 +336,7 @@ function getRandomTargets(source, arrTargets, num = 6, dazzleBypass = false) {
 
 
 function getTauntedTargets(source, arrTargets, num = 6) {
-	if (isMonster(source) || source._attOrDef == arrTargets[0]._attOrDef) {
+	if (arrTargets.length == 0 || isMonster(source) || source._attOrDef == arrTargets[0]._attOrDef) {
 		return [];
 	}
 

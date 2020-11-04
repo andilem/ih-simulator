@@ -18,10 +18,17 @@ const defHeroes = defTeam.heroes;
 
 for (let i = 0; i < 6; i++) {
 	attHeroes[i] = new hero('None', i, 'att', attTeam, defTeam);
+	attHeroes[i].setTeams(attTeam, defTeam);
 	defHeroes[i] = new hero('None', i, 'def', defTeam, attTeam);
+	defHeroes[i].setTeams(defTeam, attTeam);
 }
 
 const lsPrefix = 'pvp_';
+
+
+function runSim() {
+	runSims(attTeam, defTeam, document.getElementById('numSims').value, document.getElementById('domSeed').value);
+}
 
 
 function initialize() {
@@ -225,13 +232,10 @@ function addOptions(dictItems, strPostfix) {
 	let option;
 
 	for (const x in dictItems) {
-		for (i = 0; i < attHeroes.length; i++) {
+		for (i = 0; i < 6; i++) {
 			option = document.createElement('option');
 			option.text = x;
 			document.getElementById('attHero' + i + strPostfix).add(option);
-		}
-
-		for (i = 0; i < defHeroes.length; i++) {
 			option = document.createElement('option');
 			option.text = x;
 			document.getElementById('defHero' + i + strPostfix).add(option);
@@ -253,7 +257,7 @@ function changeHero(heroPos, prefix, skipUpdates = false) {
 	if (cHeroName == pHeroName) {
 		// no change, do nothing
 	} else {
-		console.log('Change Hero ' + heroPos + ': ' + pHeroName + ' to ' + cHeroName);
+		console.log('Change Hero ' + prefix + '-' + heroPos + ': ' + pHeroName + ' to ' + cHeroName);
 
 		cHeroSkins.value = 'None';
 		const skinLen = cHeroSkins.options.length - 1;
@@ -262,10 +266,10 @@ function changeHero(heroPos, prefix, skipUpdates = false) {
 		}
 
 		if (cHeroName == 'None') {
-			arrToUse[heroPos] = new hero('None', heroPos, prefix, myTeam, otherTeam);
+			arrToUse[heroPos] = new hero('None', heroPos, prefix);
 			cHeroSheet.innerHTML = '';
 		} else {
-			arrToUse[heroPos] = new baseHeroStats[cHeroName]['className'](cHeroName, heroPos, prefix, myTeam, otherTeam);
+			arrToUse[heroPos] = new baseHeroStats[cHeroName]['className'](cHeroName, heroPos, prefix);
 
 			if (cHeroName in skins) {
 				for (const x in skins[cHeroName]) {
@@ -275,6 +279,7 @@ function changeHero(heroPos, prefix, skipUpdates = false) {
 				}
 			}
 		}
+		arrToUse[heroPos].setTeams(myTeam, otherTeam);
 
 		if (!skipUpdates) {
 			updateTeam(prefix);
@@ -319,7 +324,8 @@ function updateTeam(prefix) {
 	const otherTeam = prefix == 'att' ? defTeam : attTeam;
 
 	const monsterName = document.getElementById(prefix + 'Monster').value;
-	myTeam.monster = new baseMonsterStats[monsterName]['className'](monsterName, prefix, myTeam, otherTeam);
+	myTeam.monster = new baseMonsterStats[monsterName]['className'](monsterName, prefix);
+	myTeam.monster.setTeams(myTeam, otherTeam);
 
 	for (const cls in guildTech) {
 		myTeam.tech[cls] = {};

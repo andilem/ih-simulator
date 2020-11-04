@@ -1,18 +1,26 @@
 class monster {
-	constructor(sMonsterName, attOrDef, myTeam, otherTeam) {
+	constructor(sMonsterName, attOrDef) {
 		this._monsterName = sMonsterName;
 		this._attOrDef = attOrDef;
 		this._heroClass = 'monster';
-		this._allies = myTeam.heroes;
-		this._enemies = otherTeam.heroes;
+		this.reset();
+	}
 
-		this._currentStats = {
+	reset() {
+		this._currentStats = { // only for hero.takeDamage/Heal, they modify these fields
 			'damageDealt': 0,
 			'damageHealed': 0,
 			'healEffect': 0.0,
 		};
 
 		this._energy = 0;
+	}
+
+	setTeams(myTeam, otherTeam) {
+		this.myTeam = myTeam;
+		this._allies = myTeam.heroes;
+		this.otherTeam = otherTeam;
+		this._enemies = otherTeam.heroes;
 	}
 
 

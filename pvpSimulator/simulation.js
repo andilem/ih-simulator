@@ -3,29 +3,28 @@ const activeQueue = [];
 let triggerQueue = [];
 let logColor = 0;
 let roundNum = 0;
+let detailDesc = false;
 
-function runSim(attTeam, defTeam, numSims, seed) {
+function runSims(attTeam, defTeam, numSims, seed) {
+	detailDesc = numSims == 1;
 	const oCombatLog = document.getElementById('combatLog');
 	let winCount = 0;
-	let result = {};
 	let monsterResult = '';
 	let someoneWon = '';
 	let endingRoundSum = 0;
 
 	const attHeroes = attTeam.heroes;
-	//const attMonsterName = document.getElementById('attMonster').value;
-	//const attMonster = new baseMonsterStats[attMonsterName]['className'](attMonsterName, 'att');
 	const attMonster = attTeam.monster;
 
 	const defHeroes = defTeam.heroes;
-	//const defMonsterName = document.getElementById('defMonster').value;
-	//const defMonster = new baseMonsterStats[defMonsterName]['className'](defMonsterName, 'def');
 	const defMonster = defTeam.monster;
 
-	if (seed !== undefined && seed !== null) {
-		random = rng(seed);
-	} else {
+	if (seed === undefined) {
+		// don't change random
+	} else if (seed === null) {
 		random = rng();
+	} else {
+		random = rng(seed);
 	}
 
 	logColor = 0;
@@ -35,11 +34,13 @@ function runSim(attTeam, defTeam, numSims, seed) {
 		h._damageDealt = 0;
 		h._damageHealed = 0;
 	}
+	attMonster.reset();
 
 	for (const h of defHeroes) {
 		h._damageDealt = 0;
 		h._damageHealed = 0;
 	}
+	defMonster.reset();
 
 	for (let simIterNum = 1; simIterNum <= numSims; simIterNum++) {
 		// @ start of single simulation
@@ -142,7 +143,7 @@ function runSim(attTeam, defTeam, numSims, seed) {
 							}
 
 							// do active
-							result = currentHero.doActive();
+							const result = currentHero.doActive();
 							if (numSims == 1) { oCombatLog.innerHTML += '<div class=\'log' + logColor + '\'><p></p></div><div class=\'log' + logColor + '\'>' + result + '</div>'; }
 
 							// monster gains energy from hero active
@@ -202,7 +203,7 @@ function runSim(attTeam, defTeam, numSims, seed) {
 
 						} else {
 							// do basic
-							result = currentHero.doBasic();
+							let result = currentHero.doBasic();
 							if (numSims == 1) {
 								result = '<div class=\'log' + logColor + '\'><p></p></div><div class=\'log' + logColor + '\'>' + result + '</div>';
 								oCombatLog.innerHTML += result;
@@ -247,7 +248,7 @@ function runSim(attTeam, defTeam, numSims, seed) {
 					// process triggers and events
 					temp = processQueue();
 					if (numSims == 1 && temp.length > 0) { oCombatLog.innerHTML += '<div class=\'log' + logColor + '\'>' + temp + '</div>'; }
-					someoneWon = checkForWin();
+					someoneWon = checkForWin(attHeroes, defHeroes);
 					if (someoneWon != '') { break; }
 
 					logColor = (logColor + 1) % 2;
@@ -290,7 +291,7 @@ function runSim(attTeam, defTeam, numSims, seed) {
 
 			temp = processQueue();
 			if (numSims == 1 && temp.length > 0) { oCombatLog.innerHTML += '<div class=\'log' + logColor + '\'>' + temp + '</div>'; }
-			someoneWon = checkForWin();
+			someoneWon = checkForWin(attHeroes, defHeroes);
 			if (someoneWon != '') { break; }
 
 
@@ -380,7 +381,7 @@ function runSim(attTeam, defTeam, numSims, seed) {
 
 				temp = processQueue();
 				if (numSims == 1 && temp.length > 0) { oCombatLog.innerHTML += '<div class=\'log' + logColor + '\'>' + temp + '</div>'; }
-				someoneWon = checkForWin();
+				someoneWon = checkForWin(attHeroes, defHeroes);
 				if (someoneWon != '') { break; }
 			} else {
 				break;

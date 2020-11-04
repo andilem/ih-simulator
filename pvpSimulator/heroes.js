@@ -1,6 +1,6 @@
 // base hero class, extend this class for each hero
 class hero {
-	constructor(name, pos, attOrDef, myTeam, otherTeam) {
+	constructor(name, pos, attOrDef) {
 		if (!(name in baseHeroStats)) throw 'Unknown hero: ' + name;
 
 		this._heroName = name;
@@ -10,10 +10,6 @@ class hero {
 		this._heroClass = baseHeroStats[name].heroClass;
 		this._starLevel = 0;
 		this._heroLevel = 0;
-		this.myTeam = myTeam;
-		this._allies = myTeam.heroes;
-		this.otherTeam = otherTeam;
-		this._enemies = otherTeam.heroes;
 
 		this._stats = {};
 		this._stats.revive = 0;
@@ -46,8 +42,15 @@ class hero {
 		this._damageHealed = 0;
 	}
 
+	setTeams(myTeam, otherTeam) {
+		this.myTeam = myTeam;
+		this._allies = myTeam.heroes;
+		this.otherTeam = otherTeam;
+		this._enemies = otherTeam.heroes;
+	}
+
 	get alive() {
-		return this._currentStats.totalHP > 0
+		return this._currentStats.totalHP > 0;
 	}
 
 
@@ -168,6 +171,8 @@ class hero {
 				case 'Shelter':
 					this.applyStatChange({ critDamageReduce: 0.15 }, 'enable2');
 					break;
+				case 'LethalFightback':
+					break;
 				case 'Vitality2':
 					this.applyStatChange({ effectBeingHealed: 0.15 }, 'enable2');
 					break;
@@ -262,7 +267,6 @@ class hero {
 
 
 		// Set bonus multipliers seem to be applied in a specific order?
-		//TODO iterate over set instead of setBonus
 		for (var x in setBonus) {
 			if (sets[x] >= 2) {
 				this.applyStatChange(setBonus[x][2], 'Two piece ' + x);
@@ -286,9 +290,10 @@ class hero {
 
 		// get and apply guild tech
 		const tech = guildTech[this._heroClass];
+		if (tech === undefined) throw "Undefined guild tech: " + this._heroClass;
 		for (const techName in tech) {
-			//const techLevel = document.getElementById(this._attOrDef + 'Tech' + this._heroClass + techName).value;
 			const techLevel = this.myTeam.tech[this._heroClass][techName];
+			if (techLevel === undefined) throw "Undefined guild tech level for " + this._heroClass + ' - ' + techName;
 
 			for (const statToBuff in tech[techName]) {
 				const techStatsToBuff = {};
@@ -402,6 +407,7 @@ class hero {
 				this._armorMultipliers[strSource + ':' + strStatName] = 1 + arrStats[strStatName];
 			} else {
 				this._stats[strStatName] += arrStats[strStatName];
+				if (strStatName == 'allDamageTaken' && this._stats[strStatName] < 0) throw 'allDamageTaken is now negative';
 			}
 		}
 	}
@@ -469,6 +475,8 @@ class hero {
 	heroDesc() {
 		if (this._heroName == 'None') {
 			return '';
+		} else if (!detailDesc) {
+			return this._attOrDef + '-' + (this._heroPos + 1) + '-' + this._heroName;
 		} else {
 			const pos1 = parseInt(this._heroPos) + 1;
 			return '<span class=\'' + this._attOrDef + '\'>' + this._heroName + '-' + pos1 + ' (' + this._currentStats.totalHP.toLocaleString() + ' hp, ' + this._currentStats.totalAttack.toLocaleString() + ' attack, ' + this._currentStats.energy + ' energy)</span>';
@@ -549,6 +557,7 @@ class hero {
 	// can further extend this to account for new mechanics by adding parameters to the end
 	// supply a default value so as to not break other calls to this function
 	calcDamage(target, attackDamage, damageSource, damageType, skillDamage = 1, canCrit = 1, dotRounds = 0, canBlock = 1, armorReduces = 1) {
+		if (attackDamage < 0) throw "calcDamage called with negative attackDamage";
 
 		// Get damage related stats
 		let critChance = canCrit * this._currentStats.crit;
@@ -602,6 +611,7 @@ class hero {
 		if (armorBreak > 1) { armorBreak = 1; }
 		if (damageReduce > 0.75) { damageReduce = 0.75; }
 		if (allDamageReduce < 0) { allDamageReduce = 0; }
+		if (allDamageDealt < 0) { allDamageDealt = 0; }
 
 		let blockChance = canBlock * (target._currentStats.block - precision);
 		if (blockChance < 0) { blockChance = 0; }
@@ -708,6 +718,7 @@ class hero {
 			attackDamage = 1;
 		}
 
+		if (attackDamage < 0) throw "calcDamage result negative attackDamage";
 
 		return {
 			'damageAmount': Math.floor(attackDamage),
@@ -726,6 +737,8 @@ class hero {
 
 
 	getHeal(source, amountHealed) {
+		if (amountHealed < 0) throw "getHeal called with negative amountHealed";
+
 		if (!this.alive) { return ''; }
 
 		let result = '';
@@ -757,7 +770,7 @@ class hero {
 
 			source._currentStats.damageHealed += amountHealed;
 
-			if (this.heroDesc() == source.heroDesc()) {
+			if (this === source) {
 				result += ' themself for ' + formatNum(amountHealed) + '.</div>';
 			} else {
 				result += this.heroDesc() + ' for ' + formatNum(amountHealed) + '.</div>';
@@ -831,6 +844,7 @@ class hero {
 		}
 
 		att += this._currentStats.fixedAttack;
+		if (att < 0) att = 0;
 		return att;
 	}
 
@@ -1227,8 +1241,8 @@ class hero {
 
 				if (b == 'Revenging Wraith') {
 					const damageCap = stack.effects.attackAmount * 25;
-					const damageAmount = Math.min(Math.floor(this._stats.totalHP * 0.30), damageCap);
-					const damageResult = stack.source.calcDamage(this, damageAmount, 'passive', 'true');
+					let damageAmount = Math.min(Math.floor(this._stats.totalHP * 0.30), damageCap);
+					let damageResult = stack.source.calcDamage(this, damageAmount, 'passive', 'true');
 					result += this.takeDamage(stack.source, 'Revenging Wraith', damageResult);
 
 					//TODO wrong - this must be called for every kind of death
@@ -1349,6 +1363,8 @@ class hero {
 
 
 	takeDamage(source, strAttackDesc, damageResult) {
+		if (damageResult.damageAmount < 0) throw "takeDamage called with negative damageAmount";
+
 		if (!this.alive) { return ''; }
 
 		let result = '';
@@ -1652,7 +1668,7 @@ class hero {
 
 		source._currentStats.damageHealed += amountHealed;
 
-		if (this.heroDesc() == source.heroDesc()) {
+		if (this === source) {
 			result += ' themself for ' + formatNum(amountHealed) + '.</div>';
 		} else {
 			result += this.heroDesc() + ' for ' + formatNum(amountHealed) + '.</div>';
@@ -1664,18 +1680,17 @@ class hero {
 
 	eventBloodthirsty(targets) {
 		let result = '';
-		let damageResult = {};
-		let hpDamage = 0;
-		const healAmount = 0;
-		let maxDamage = 15 * this._currentStats.totalAttack;
+		const maxDamage = 15 * this._currentStats.totalAttack;
 
 		for (const i in targets) {
-			hpDamage = 0.20 * (targets[i][1]._stats.totalHP - targets[i][1]._currentStats.totalHP);
-			maxDamage = 15 * this._currentStats.totalAttack;
+			const target = targets[i][1];
+			if (!target.alive || target._currentStats.totalHP >= target._stats.totalHP) continue;
+
+			let hpDamage = 0.20 * (target._stats.totalHP - target._currentStats.totalHP);
 			if (hpDamage > maxDamage) { hpDamage = maxDamage; }
 
-			damageResult = this.calcDamage(targets[i][1], hpDamage, 'passive', 'true');
-			result += targets[i][1].takeDamage(this, 'Bloodthirsty', damageResult);
+			const damageResult = this.calcDamage(target, hpDamage, 'passive', 'true');
+			result += target.takeDamage(this, 'Bloodthirsty', damageResult);
 
 			const healAmount = this.calcHeal(this, 0.30 * damageResult.damageAmount);
 			result += this.getHeal(this, healAmount);

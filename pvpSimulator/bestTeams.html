@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Idle Heroes Best Teams</title>
+
+  <link rel="stylesheet" type="text/css" href="style.css">
+
+  <script src="utilityFunctions.js"></script>
+  <script src="heroes.js"></script>
+  <script src="heroSubclasses.js"></script>
+  <script src="baseHeroStats.js"></script>
+  <script src="monsters.js"></script>
+  <script src="baseMonsterStats.js"></script>
+  <script src="guildTech.js"></script>
+  <script src="equipment.js"></script>
+  <script src="stone.js"></script>
+  <script src="artifact.js"></script>
+  <script src="skin.js"></script>
+  <script src="avatarFrame.js"></script>
+  <script src="simulation.js"></script>
+  <script src="genetic.js"></script>
+</head>
+
+
+<body>
+  <div class="banner">
+    <div><a href="../index.html">Home</a></div>
+    <h1>Idle Heroes Best Teams</h1>
+  </div>
+
+  <div>
+    <h2>Combat Log</h2>
+    <div class="log" id="combatLog"></div>
+    <div>
+      <!--label for="numSims">Number of Simulations to Run:</label>
+<input type="text" id="numSims" size="3" value="1" onchange="storeLocal(this);" /-->
+      <input type="submit" value="Run" onclick="findBestTeams();"></input>
+      <!--label for="domSeed">Seed:</label>
+<input type="text" id="domSeed" size="15" value="0" />
+<input type="submit" value="Generate New Seed" onclick="genSeed();"></input>
+<div>Detailed combat log output only if running a single simulation.</div>
+<div>Multiple simulations output just summary data.</div>
+<div>Single run can take several seconds because of the amount of data written to the log.</div>
+<div>A thousand simulations takes around 5 seconds on my home computer.</div-->
+    </div>
+  </div>
+</body>
+
+</html>
