@@ -1,359 +1,417 @@
-random = rng(1);
+class Task {
+	constructor(id, action, data, onProgress) {
+		this.id = id;
+		this.action = action;
+		this.data = data;
+		this.onProgress = onProgress;
+		this.result = undefined;
+		this.error = undefined;
+		this.resolve = undefined;
+		this.reject = undefined;
+		this.promise = new Promise((resolve, reject) => {
+			if (this.result !== undefined) {
+				resolve(result);
+			} else if (this.error !== undefined) {
+				reject(result);
+			} else {
+				this.resolve = resolve;
+				this.reject = reject;
+			}
+		})
+	}
 
-const tech = {
-	'Warrior': {
-		hpPercent: 60,
-		attackPercent: 50,
-		crit: 40,
-		block: 30,
-		skillDamage: 20,
-		speed: 20,
-		constitution: 20,
-		mind: 20,
-		antiMage: 20,
-		antiRanger: 20,
-		antiAssassin: 20,
-		antiPriest: 20,
-		blessingOfPurification: 10,
-		spellOfAgility: 5,
-		immortalRoar: 5,
-		heartOfCrystal: 10,
+	finish(result) {
+		if (this.resolve !== undefined) {
+			this.resolve(result);
+		} else {
+			this.result = result;
+		}
+	}
+
+	fail(error) {
+		if (this.reject !== undefined) {
+			this.reject(error);
+		} else {
+			this.error = error;
+		}
+	}
+}
+
+const workerPool = {
+	id: 0,
+	maxSize: 4, //navigator.hardwareConcurrency,
+	workers: [],
+	available: [],
+	tasks: {},
+	queue: [],
+
+	submit: function (action, data, onProgress) {
+		const task = new Task(this.id++, action, data, onProgress);
+		this.tasks[task.id] = task;
+
+		let worker;
+		if (this.available.length > 0) {
+			worker = this.available.pop();
+		} else if (this.workers.length < this.maxSize) {
+			worker = new Worker('geneticWorker.js');
+			worker.onmessage = e => this.onMessage(worker, e);
+			this.workers.push(worker);
+		} else {
+			this.queue.push(task);
+		}
+		if (worker) {
+			this.runTask(worker, task);
+		}
+		return task.promise;
 	},
-	'Mage': {
-		hpPercent: 60,
-		attackPercent: 50,
-		crit: 40,
-		precision: 30,
-		skillDamage: 20,
-		speed: 20,
-		constitution: 20,
-		mind: 20,
-		antiWarrior: 20,
-		antiRanger: 20,
-		antiAssassin: 20,
-		antiPriest: 20,
-		blessingOfPurification: 10,
-		spellOfAgility: 5,
-		immortalRoar: 5,
-		heartOfCrystal: 10,
+
+	runTask: function (worker, task) {
+		console.debug('Start task ' + task.id);
+		worker.postMessage({
+			id: task.id,
+			action: task.action,
+			data: task.data
+		});
 	},
-	'Ranger': {
-		hpPercent: 60,
-		attackPercent: 50,
-		block: 40,
-		precision: 30,
-		skillDamage: 20,
-		speed: 20,
-		constitution: 20,
-		mind: 20,
-		antiWarrior: 20,
-		antiMage: 20,
-		antiAssassin: 20,
-		antiPriest: 20,
-		blessingOfPurification: 10,
-		spellOfAgility: 5,
-		immortalRoar: 5,
-		heartOfCrystal: 10,
-	},
-	'Assassin': {
-		hpPercent: 60,
-		critDamage: 50,
-		crit: 40,
-		armorBreak: 30,
-		skillDamage: 20,
-		speed: 20,
-		constitution: 20,
-		mind: 20,
-		antiWarrior: 20,
-		antiMage: 20,
-		antiRanger: 20,
-		antiPriest: 20,
-		blessingOfPurification: 10,
-		spellOfAgility: 5,
-		immortalRoar: 5,
-		heartOfCrystal: 10,
-	},
-	'Priest': {
-		hpPercent: 60,
-		block: 50,
-		crit: 40,
-		speed: 30,
-		skillDamage: 20,
-		speed2: 20,
-		constitution: 20,
-		mind: 20,
-		antiWarrior: 20,
-		antiMage: 20,
-		antiRanger: 20,
-		antiAssassin: 20,
-		blessingOfPurification: 10,
-		spellOfAgility: 5,
-		immortalRoar: 5,
-		heartOfCrystal: 10,
-	},
+
+	onMessage: function (worker, e) {
+		const id = e.data.id;
+		const task = this.tasks[id];
+		const type = e.data.type;
+		if (type == 'progress') {
+			if (task.onProgress !== undefined) {
+				task.onProgress(e.data.data);
+			}
+			return;
+		}
+		delete this.tasks[id];
+		if (type == 'result') {
+			console.debug('Task ' + id + ' finished');
+			task.finish(e.data.data);
+		} else if (type == 'error') {
+			console.warn('Task ' + id + ' error: ' + e.data.data);
+			task.fail(e.data.data);
+		}
+		const nextTask = this.queue.shift();
+		if (nextTask) {
+			this.runTask(worker, nextTask);
+		} else {
+			this.available.push(worker);
+		}
+	}
 };
 
-function createTeam() {
-	const team = {
-		heroes: [],
-		monster: randomMonster(),
-		tech: tech,
-		frame: avatarFrames['IDA Maverick +7'],
-		statues: {},
+random = rng(1);
 
+function randomTeam() {
+	return {
+		heroes: Array.from({ length: 6 }, () => randomHero()),
+		monster: randomMonster(),
 		fights: 0,
 		wins: 0,
-		winRate: function () {
-			return this.wins / this.fights;
-		},
-		resetStats: function () {
-			this.fights = 0;
-			this.wins = 0;
-		},
-		desc: function () {
-			let result = '';
-			for (const h of this.heroes) {
-				result += h._heroName + ' (' + h.gear + '; ' + h._stone + '; ' + h._artifact + '; ' + h._skin + '; ' + (E1.indexOf(h._enable1) + 1)
-					+ (E2.indexOf(h._enable2) + 1) + (E3.indexOf(h._enable3) + 1) + (E1.indexOf(h._enable4) + 1) + (E5.indexOf(h._enable5) + 1) + '),\n';
-			}
-			result += this.monster._monsterName;
-			if (this.fights > 0) {
-				result += '\n  win ' + this.wins + '/' + this.fights + ' = ' + (this.winRate() * 100).toFixed(1) + ' %';
-			}
-			return result;
-		},
 	}
-	for (let i = 0; i < 6; i++) {
-		team.heroes[i] = createHero(i);
-	}
-	for (const type of ['Holy', 'Evil']) {
-		team.statues[type] = {};
-		team.statues[type].speed = 28;
-		team.statues[type].hpPercent = 8;
-		team.statues[type].attackPercent = 8;
-	}
-	console.log('Created team:\n' + team.desc());
-	return team;
 }
 
 function randomMonster() {
 	const keys = Object.keys(baseMonsterStats).filter(s => s != 'None');
-	const name = keys[Math.floor(random() * keys.length)];
-	return new baseMonsterStats[name]['className'](name, '');
+	return keys[randInt(keys.length)];
 }
 
-function createHero(pos) {
+function randomHero() {
 	const keys = Object.keys(baseHeroStats).filter(s => s != 'None');
-	const name = keys[Math.floor(random() * keys.length)];
-	const hero = new baseHeroStats[name]['className'](name, pos, '');
-	hero._heroLevel = 345;
-	assignGear(hero);
-	hero._stone = randomStone();
-	hero._artifact = randomArtifact(hero);
-	hero._skin = randomSkin(hero);
-	hero._enable1 = randomE1();
-	hero._enable2 = randomE2();
-	hero._enable3 = randomE3();
-	hero._enable4 = randomE1();
-	hero._enable5 = randomE5();
+	const name = keys[randInt(keys.length)];
+	const hero = {
+		name: name,
+		gear: randomGear(),
+		stone: randomStone(),
+		artifact: randomArtifact(baseHeroStats[name].heroFaction),
+		skin: randomSkin(name),
+		E1: randomEnable(3),
+		E2: randomEnable(3),
+		E3: randomEnable(3),
+		E4: randomEnable(3),
+		E5: randomEnable(2),
+	};
 	return hero;
 }
 
-function assignGear(hero) {
-	const options = ['ClassGear', 'SplitHP', 'SplitATK'];
-	const option = options[Math.floor(random() * 3)];
-	hero.gear = option; // for debug/output
-	if (option == 'ClassGear') {
-		hero._weapon = classGearMapping[hero._heroClass].weapon;
-		hero._armor = classGearMapping[hero._heroClass].armor;
-		hero._shoe = classGearMapping[hero._heroClass].shoe;
-		hero._accessory = classGearMapping[hero._heroClass].accessory;
-	} else if (option == 'SplitHP') {
-		hero._weapon = '6* Thorny Flame Whip';
-		hero._armor = classGearMapping[hero._heroClass].armor;
-		hero._shoe = classGearMapping[hero._heroClass].shoe;
-		hero._accessory = '6* Flame Necklace';
-	} else {
-		hero._weapon = classGearMapping[hero._heroClass].weapon;
-		hero._armor = '6* Flame Armor';
-		hero._shoe = '6* Flame Boots';
-		hero._accessory = '6* Flame Necklace';
-	}
+function randomGear() {
+	const gearOptions = ['ClassGear', 'SplitHP', 'SplitATK'];
+	return gearOptions[randInt(gearOptions.length)];
 }
 
 function randomStone() {
 	const keys = Object.keys(stones).filter(s => s != 'None');
-	return keys[Math.floor(random() * keys.length)];
+	return keys[randInt(keys.length)];
 }
 
-function randomArtifact(hero) {
-	const keys = Object.keys(artifacts).filter(s => s != 'None' && (artifacts[s].limit == '' || artifacts[s].limit == hero._heroFaction));
-	return keys[Math.floor(random() * keys.length)];
+function randomArtifact(faction) {
+	// no enhanced P2W artifacts
+	const keys = Object.keys(artifacts).filter(s =>
+		s != 'None'
+		&& (artifacts[s].limit == '' || artifacts[s].limit == faction)
+		&& !s.startsWith('Glittery ')
+		&& !s.startsWith('Radiant ')
+		&& !s.startsWith('Splendid ')
+	);
+	return keys[randInt(keys.length)];
 }
 
-function randomSkin(hero) {
-	const heroSkins = skins[hero._heroName];
+function randomSkin(name) {
+	const heroSkins = skins[name];
 	if (heroSkins === undefined || Object.keys(heroSkins).length == 0) return 'None';
 	const keys = Object.keys(heroSkins);
-	return keys[Math.floor(random() * keys.length)];
-}
-
-const E1 = ['Vitality', 'Mightiness', 'Growth'];
-const E2 = ['Shelter', 'LethalFightback', 'Vitality2'];
-const E3 = ['Resilience', 'SharedFate', 'Purify'];
-const E5 = ['BalancedStrike', 'UnbendingWill'];
-
-function randomE1() {
-	return E1[Math.floor(random() * E1.length)];
-}
-
-function randomE2() {
-	return E2[Math.floor(random() * E2.length)];
-}
-
-function randomE3() {
-	return E3[Math.floor(random() * E3.length)];
-}
-
-function randomE5() {
-	return E5[Math.floor(random() * E5.length)];
-}
-
-
-function copyHero(hero, mutations) {
-	const copy = new baseHeroStats[hero._heroName]['className'](hero._heroName, hero._heroPos, '');
-	copy._heroLevel = hero._heroLevel;
-
-	// possible mutations: gear, stone, artifact, skin, enable1..5
-	// mutate each with 12% (~1/8) probability per desired mutation
-	const mutationProb = mutations * 0.12;
-	let c = 0;
-	if (random() < mutationProb * 3 / 2) {
-		c++;
-		assignGear(copy);
+	const legendary = keys.filter(s => s.startsWith('Legendary'));
+	if (legendary.length > 0) {
+		return legendary[randInt(legendary.length)]
 	} else {
-		copy.gear = hero.gear;
-		copy._weapon = hero._weapon;
-		copy._armor = hero._armor;
-		copy._shoe = hero._shoe;
-		copy._accessory = hero._accessory;
-	}
-	if (random() < mutationProb) { copy._stone = randomStone(); c++; } else copy._stone = hero._stone;
-	if (random() < mutationProb) { copy._artifact = randomArtifact(copy); c++; } else copy._artifact = hero._artifact;
-	if (random() < mutationProb * 4 / 3) { copy._skin = randomSkin(copy); c++; } else copy._skin = hero._skin;
-	if (random() < mutationProb * 3 / 2) { copy._enable1 = randomE1(); c++; } else copy._enable1 = hero._enable1;
-	if (random() < mutationProb * 3 / 2) { copy._enable2 = randomE2(); c++; } else copy._enable2 = hero._enable2;
-	if (random() < mutationProb * 3 / 2) { copy._enable3 = randomE3(); c++; } else copy._enable3 = hero._enable3;
-	if (random() < mutationProb * 3 / 2) { copy._enable4 = randomE1(); c++; } else copy._enable4 = hero._enable4;
-	if (random() < mutationProb * 2 / 1) { copy._enable5 = randomE5(); c++; } else copy._enable5 = hero._enable5;
-
-	//console.log('Created hero with ' + c + ' mutations');
-
-	return copy;
-}
-
-function copyTeam(team, mutations) {
-	const copy = Object.assign({}, team);
-	copy.resetStats();
-
-	// mutate each hero with 1/6 of desired mutations
-	copy.heroes = Array.from(team.heroes, h => copyHero(h, mutations / 6));
-
-	// mutate monster with 1/6 probability per desired mutation
-	if (random() < mutations / 6) {
-		copy.monster = randomMonster()
-	} else {
-		copy.monster = new baseMonsterStats[team.monster._monsterName]['className'](copy.monster._monsterName, '');
-	}
-
-	// x %: swap 2 heroes
-	/*if (random() < 0.5) {
-		const i = Math.floor(random() * 6);
-		let j = Math.floor(random() * 5);
-		if (j >= i) j++;
-		const h = copy.heroes[i];
-		copy.heroes[i] = copy.heroes[j];
-		copy.heroes[j] = h;
-	}*/
-
-	//console.log('copyTeam:\n' + copy.desc());
-	return copy;
-}
-
-
-function improveTeam(team, refs) {
-	console.log('----- Improve team ' + team.desc());
-	const teamMutations = Array.from({ length: 10 }, (v, k) => copyTeam(team, k > 0 ? 10 : 0));
-
-	let count = 0;
-	const num = teamMutations.length * refs.length * 2;
-	for (var i = 0; i < teamMutations.length; i++) {
-		for (var j = 0; j < refs.length; j++) {
-			matchup(teamMutations[i], refs[j]);
-			matchup(refs[j], teamMutations[i]);
-			count += 2;
-		}
-		console.log(count + ' / ' + num + ' matchups done');
-	}
-
-	teamMutations.sort((a, b) => b.winRate() - a.winRate());
-	console.log('----- Ranking -----');
-	for (var i = 0; i < teamMutations.length; i++) {
-		console.log((i + 1) + '. ' + teamMutations[i].desc());
+		return keys[randInt(keys.length)];
 	}
 }
 
+function randomEnable(options) {
+	return randInt(options) + 1;
+}
 
-function findBestTeams() {
-	console.log('----- FIND BEST TEAMS -----');
-	const teams = Array.from({ length: 10 }, x => createTeam());
+function logRanking(teams, heroRankings, generation, combatLog) {
+	let msg = '===== GENERATION ' + generation + ' RANKINGS =====';
+	console.log(msg);
+	if (combatLog) combatLog.innerText = msg;
 
-	let count = 0;
-	const num = teams.length * (teams.length - 1);
+	msg = '===== TEAM RANKING =====';
+	console.log(msg);
+	if (combatLog) combatLog.innerText += '\n\n' + msg;
+
 	for (var i = 0; i < teams.length; i++) {
-		for (var j = 0; j < teams.length; j++) {
-			if (i != j) {
-				matchup(teams[i], teams[j]);
-				count++;
+		msg = (i + 1) + '. ' + desc(teams[i]);
+		console.log(msg);
+		if (combatLog) combatLog.innerText += '\n\n' + msg;
+	}
+
+	msg = '===== HERO RANKING =====';
+	console.log(msg);
+	if (combatLog) combatLog.innerText += '\n\n' + msg;
+
+	for (var i = 0; i < heroRankings.length; i++) {
+		msg = (i + 1) + '. ' + descHero(heroRankings[i].best) + ' - ' + heroRankings[i].score;
+		console.log(msg);
+		if (combatLog) combatLog.innerText += '\n' + msg;
+	}
+}
+
+async function findBestTeams() {
+	const generations = 10;
+	const population = 50;
+	const keepBest = 20;
+	const generationsImproveBest = 5;
+	const generationsImproveNew = 10;
+
+	const combatLog = document.getElementById('combatLog');
+
+	let teams = loadTeams('teams');
+	if (!teams) {
+		teams = Array.from({ length: keepBest }, () => randomTeam());
+		console.log('Created ' + teams.length + ' random teams');
+		saveTeams('teams', teams);
+	} else {
+		if (teams.length > keepBest) {
+			teams.length = keepBest;
+			saveTeams('teams', teams);
+		}
+		console.log('Loaded ' + teams.length + ' teams');
+	}
+	let heroRankings = getHeroRankings(teams);
+
+	logRanking(teams, heroRankings, 0, combatLog);
+
+	let newGen = loadTeams('newGen');
+	if (newGen) {
+		if (newGen.length > population) newGen.length = population;
+		console.log('Loaded generation 1 with ' + newGen.length + ' teams');
+	}
+
+	// evolve
+	for (var n = 1; n <= generations; n++) {
+		if (!newGen) {
+			const bestHeroes = {};
+			heroRankings.forEach(r => bestHeroes[r.hero] = r.best);
+			newGen = newGeneration(teams, population, keepBest, bestHeroes);
+			console.log('Created generation ' + n + ' with ' + newGen.length + ' teams');
+		}
+		saveTeams('newGen', newGen);
+
+		const promises = [];
+		for (let i = newGen.length - 1; i >= 0; i--) {
+			if (newGen[i].fights == 0) {
+				promises.push(workerPool.submit('improveTeam', { team: newGen[i], refs: teams, generations: i < keepBest ? generationsImproveBest : generationsImproveNew }, data => {
+					newGen[i] = data;
+					saveTeams('newGen', newGen);
+				}));
 			}
 		}
-		console.log(count + ' / ' + num + ' matchups done');
-	}
+		await Promise.all(promises);
 
-	teams.sort((a, b) => b.winRate() - a.winRate());
-	console.log('----- Ranking -----');
-	for (var i = 0; i < teams.length; i++) {
-		console.log((i + 1) + '. ' + teams[i].desc());
-	}
+		teams = selectBest(newGen, keepBest);
+		heroRankings = getHeroRankings(teams);
+		newGen = undefined;
+		saveTeams('teams', teams);
 
-	improveTeam(teams[0], teams);
+		logRanking(teams, heroRankings, n, combatLog);
+	}
 }
 
 
-function matchup(attTeam, defTeam) {
-	const numFights = 10;
+function newGeneration(teams, size, keepBest, bestHeroes) {
+	if (keepBest > teams.length) keepBest = teams.length;
 
-	if (attTeam === defTeam) throw 'A team cannot fight against itself';
-
-	for (const h of attTeam.heroes) {
-		h.setTeams(attTeam, defTeam);
-		h.updateCurrentStats(); // aura might have changed
-		h._attOrDef = 'att';
+	const newGen = [];
+	// first keepBest individuals: best teams
+	for (var c = 0; c < keepBest; c++) {
+		newGen[c] = crossoverTeams(teams[c], teams[c], 0, bestHeroes);
 	}
-	attTeam.monster.setTeams(attTeam, defTeam);
-	attTeam.monster._attOrDef = 'att';
-
-	for (const h of defTeam.heroes) {
-		h.setTeams(defTeam, attTeam);
-		h.updateCurrentStats(); // aura might have changed
-		h._attOrDef = 'def';
+	// remaining individuals: recombinations/mutations of best 
+	for (var c = keepBest; c < size; c++) {
+		newGen[c] = crossoverTeams(teams[randExp(teams.length, 0.9)], teams[randExp(teams.length, 0.9)], 2, bestHeroes);
 	}
-	defTeam.monster.setTeams(defTeam, attTeam);
-	defTeam.monster._attOrDef = 'def';
 
-	const wins = runSims(attTeam, defTeam, numFights);
-	attTeam.fights += numFights;
-	attTeam.wins += wins;
-	defTeam.fights += numFights;
-	defTeam.wins += numFights - wins;
+	return newGen;
+}
+
+
+function selectBest(teams, num) {
+	if (num > teams.length) num = teams.length;
+	teams.sort((a, b) => b.wins / b.fights - a.wins / a.fights);
+
+	teams.length = num; //TODO preserve diversity
+	return teams;
+}
+
+
+function getHeroRankings(teams) {
+	const score = {};
+	for (var i = 0; i < teams.length; i++) {
+		for (const h of teams[i].heroes) {
+			if (h.name in score) score[h.name].score += teams.length - i;
+			else score[h.name] = { best: h, score: teams.length - i };
+		}
+	}
+	const rankings = [];
+	for (const s in score) {
+		rankings.push({ hero: s, score: score[s].score, best: score[s].best });
+	}
+	rankings.sort((a, b) => b.score - a.score);
+	return rankings;
+}
+
+
+function crossoverTeams(team1, team2, mutations, bestHeroes) {
+	const result = {
+		heroes: [],
+		monster: random() < 0.5 ? team1.monster : team2.monster,
+		fights: 0,
+		wins: 0,
+	};
+	for (var i = 0; i < 6; i++) {
+		if (random() < mutations / 6) {
+			const hero = randomHero();
+			const best = bestHeroes[hero.name];
+			result.heroes[i] = best ? Object.assign({}, best) : hero;
+		} else {
+			result.heroes[i] = Object.assign({}, random() < 0.5 ? team1.heroes[i] : team2.heroes[i]);
+		}
+	}
+	return result;
+}
+
+
+function saveTeams(key, data) {
+	if (typeof (Storage) === undefined) {
+		console.warn('Storage not available');
+		return;
+	}
+
+	localStorage.setItem(key, JSON.stringify(data));
+	console.debug('Saved ' + data.length + ' teams at ' + key);
+}
+
+function loadTeams(key) {
+	if (typeof (Storage) === undefined) {
+		console.warn('Storage not available');
+		return null;
+	}
+
+	const json = localStorage.getItem(key);
+	if (json === null) {
+		console.info('No teams found in storage at ' + key);
+		return null;
+	}
+
+	const data = JSON.parse(json);
+	console.log('Loaded ' + data.length + ' teams from ' + key);
+	return data;
+}
+
+function deleteStorage(key) {
+	if (typeof (Storage) === undefined) {
+		console.warn('Storage not available');
+		return;
+	}
+
+	if (key) {
+		localStorage.removeItem(key);
+	}
+	else {
+		['teams', 'newGen'].forEach(k => localStorage.removeItem(k));
+	}
+	console.info('Storage deleted');
+}
+
+
+function descHero(hero) {
+	return hero.name + ' (' + hero.gear + '; ' + hero.stone + '; ' + hero.artifact + '; ' + hero.skin + '; '
+		+ hero.E1 + hero.E2 + hero.E3 + hero.E4 + hero.E5 + ')';
+}
+
+function desc(team) {
+	let result = '';
+	for (const h of team.heroes) {
+		result += descHero(h) + ',\n';
+	}
+	result += team.monster;
+	if (team.fights > 0) {
+		result += '\n  win ' + team.wins + '/' + team.fights + ' = ' + (team.wins / team.fights * 100).toFixed(1) + ' %';
+	}
+	return result;
+}
+
+function shortDesc(team) {
+	let result = '';
+	for (const h of team.heroes) {
+		result += h.name + ', ';
+	}
+	result += team.monster;
+	if (team.fights > 0) {
+		result += ' -  win ' + team.wins + '/' + team.fights + ' = ' + (team.wins / team.fights * 100).toFixed(1) + ' %';
+	}
+	return result;
+}
+
+function showTeams() {
+	const combatLog = document.getElementById('combatLog');
+	const teams = loadTeams('teams');
+	if (teams) {
+		combatLog.innerText = JSON.stringify(teams, null, 4);
+	} else {
+		combatLog.innerText = 'Not found';
+	}
+}
+
+function parseTeams() {
+	const combatLog = document.getElementById('combatLog');
+	try {
+		const teams = JSON.parse(combatLog.innerText);
+		saveTeams('teams', teams);
+	} catch (e) {
+		combatLog.innerText = e;
+	}
 }

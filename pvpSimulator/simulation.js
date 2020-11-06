@@ -7,7 +7,7 @@ let detailDesc = false;
 
 function runSims(attTeam, defTeam, numSims, seed) {
 	detailDesc = numSims == 1;
-	const oCombatLog = document.getElementById('combatLog');
+	const oCombatLog = combatLog ? combatLog : document.getElementById('combatLog');
 	let winCount = 0;
 	let monsterResult = '';
 	let someoneWon = '';

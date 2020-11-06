@@ -6,6 +6,8 @@ function formatNum(num) {
 
 // replacement seedable prng
 // eslint-disable-next-line prefer-const
+const randInt = max => Math.floor(random() * max);
+const randExp = (max, a) => Math.min(Math.floor(max * Math.log(random() * (a ** max - 1) + 1) / Math.log((a ** max - 1) + 1)), max - 1);
 let random = rng();
 function rng(seed = 0) {
 	if (seed == 0) {

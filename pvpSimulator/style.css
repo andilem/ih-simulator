@@ -30,12 +30,13 @@ h2, div, p {
 
 
 .log {
-  height: 400px;
+  height: 500px;
   overflow: scroll;
   background-color: #f6f6f6;
   margin-bottom: 18px;
   color: #000;
   border: 1px solid #000;
+  white-space: pre-wrap;
 }
 
 

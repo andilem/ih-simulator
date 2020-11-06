@@ -641,13 +641,14 @@ class Carrie extends hero {
 
 			if (targets.length > 0) {
 				let damageAmount = 0.5 * (targets[0]._stats.totalHP - targets[0]._currentStats.totalHP);
+				if (damageAmount > 0) {
+					if (damageAmount > maxDamage) {
+						damageAmount = maxDamage;
+					}
 
-				if (damageAmount > maxDamage) {
-					damageAmount = maxDamage;
+					damageResult = this.calcDamage(targets[0], damageAmount, 'passive', 'true');
+					result += targets[0].takeDamage(this, 'Shadowy Spirit', damageResult);
 				}
-
-				damageResult = this.calcDamage(targets[0], damageAmount, 'passive', 'true');
-				result += targets[0].takeDamage(this, 'Shadowy Spirit', damageResult);
 			}
 
 
@@ -3902,12 +3903,14 @@ class Rogan extends hero {
 
 				if (targets[i].alive) {
 					hpDamage = 0.20 * (targets[i]._stats.totalHP - targets[i]._currentStats.totalHP);
-					maxDamage = 15 * this._currentStats.totalAttack;
-					if (hpDamage > maxDamage) { hpDamage = maxDamage; }
+					if (hpDamage > 0) {
+						maxDamage = 15 * this._currentStats.totalAttack;
+						if (hpDamage > maxDamage) { hpDamage = maxDamage; }
 
-					hpDamageResult = this.calcDamage(targets[i], hpDamage, 'active', 'true');
-					result += targets[i].takeDamage(this, 'Bloodthirsty Predator HP', hpDamageResult);
-					totalDamage += hpDamageResult.damageAmount;
+						hpDamageResult = this.calcDamage(targets[i], hpDamage, 'active', 'true');
+						result += targets[i].takeDamage(this, 'Bloodthirsty Predator HP', hpDamageResult);
+						totalDamage += hpDamageResult.damageAmount;
+					}
 				}
 
 				const healAmount = this.calcHeal(this, 0.50 * totalDamage);

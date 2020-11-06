@@ -283,7 +283,7 @@ class hero {
 		// skin
 		if (this._skin != 'None') {
 			const stats = skins[this._heroName][this._skin];
-			if (stats === undefined) throw 'Unknown skin: ' + _heroName + ' - ' + _skin
+			if (stats === undefined) throw 'Unknown skin: ' + this._heroName + ' - ' + this._skin
 			this.applyStatChange(stats, 'skin');
 		}
 
