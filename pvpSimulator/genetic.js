@@ -201,10 +201,9 @@ function logRanking(teams, heroRankings, generation, combatLog) {
 
 async function findBestTeams() {
 	const generations = 20;
-	const population = 40;
+	const population = 50;
 	const keepBest = 20;
-	const generationsImproveBest = 5;
-	const generationsImproveNew = 10;
+	const generationsImprove = 5;
 
 	const combatLog = document.getElementById('combatLog');
 
@@ -245,7 +244,7 @@ async function findBestTeams() {
 		const promises = [];
 		for (let i = newGen.length - 1; i >= 0; i--) {
 			if (newGen[i].fights == 0) {
-				promises.push(workerPool.submit('improveTeam', { team: newGen[i], refs: teams, generations: i < keepBest ? generationsImproveBest : generationsImproveNew }, data => {
+				promises.push(workerPool.submit('improveTeam', { team: newGen[i], refs: teams, generations: generationsImprove }, data => {
 					newGen[i] = data;
 					saveTeams('newGen', newGen);
 				}));
@@ -275,21 +274,23 @@ function newGeneration(teams, size, keepBest, bestHeroes) {
 		newGen[c] = crossoverTeams(teams[c], teams[c], 0, bestHeroes);
 	}
 	// remaining individuals: recombinations/mutations of best 
-	for (var c = keepBest; c < size; c++) {
-		newGen[c] = crossoverTeams(teams[randExp(teams.length, 0.9)], teams[randExp(teams.length, 0.9)], 1, bestHeroes);
+	for (var c = keepBest; c < size + 3; c++) { // generate some more because duplicates are removed afterwards
+		newGen[c] = crossoverTeams(teams[randExp(teams.length, 0.9)], teams[randExp(teams.length, 0.9)], 1.2, bestHeroes);
 	}
 
-	return newGen;
+	const result = [];
+	for (const t of newGen) {
+		if (result.length < size && result.every(r => isDiverse(r, t, 1))) result.push(t);
+	}
+
+	return result;
 }
 
-
 function selectBest(teams, num) {
-	if (num > teams.length) num = teams.length;
-
 	const result = [];
 	const penalties = {};
 
-	while (result.length < num) {
+	while (result.length < num && teams.length > 0) {
 		for (const t of teams) {
 			let penalty = 0;
 			for (const h of t.heroes) {
@@ -300,18 +301,42 @@ function selectBest(teams, num) {
 		}
 		teams.sort((a, b) => b.wins / b.fights - b.penalty - a.wins / a.fights + a.penalty);
 		const team = teams.shift();
+		result.push(team);
 		for (const h of team.heroes) {
 			if (h.name in penalties) {
-				penalties[h.name] += 0.005;
+				penalties[h.name] += 0.01;
 			} else {
-				penalties[h.name] = 0.005;
+				penalties[h.name] = 0.01;
 			}
 		}
-		result.push(team);
+		teams = teams.filter(t => isDiverse(t, team, 2));
 	}
 	result.sort((a, b) => b.wins / b.fights - a.wins / a.fights);
 
 	return result;
+}
+
+function isDiverse(team1, team2, minDiversity) {
+	const heroCount = {};
+	for (const h of team1.heroes) {
+		if (h.name in heroCount) {
+			heroCount[h.name]++;
+		} else {
+			heroCount[h.name] = 1;
+		}
+	}
+	for (const h of team2.heroes) {
+		if (h.name in heroCount) {
+			heroCount[h.name]--;
+		} else {
+			heroCount[h.name] = -1;
+		}
+	}
+	let result = 0;
+	for (const count of Object.values(heroCount)) {
+		if (count > 0) result += count;
+	}
+	return result >= minDiversity;
 }
 
 
@@ -391,7 +416,7 @@ function deleteStorage(key) {
 	else {
 		['teams', 'newGen'].forEach(k => localStorage.removeItem(k));
 	}
-	console.info('Storage deleted');
+	console.info('Storage deleted at ' + key);
 }
 
 

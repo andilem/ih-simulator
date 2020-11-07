@@ -305,7 +305,7 @@ function improveTeam(team, refs, generations, onNextGen) {
 	// find best positions
 	teams.length = 1;
 	teams[0].resetStats();
-	for (var i = 1; i < 20; i++) {
+	for (var i = 1; i < population; i++) {
 		const newTeam = combineTeam(teams[0], teams[0], 0);
 		shuffle(newTeam.heroes);
 		for (const i in newTeam.heroes) {

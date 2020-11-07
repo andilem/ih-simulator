@@ -4070,14 +4070,14 @@ class Sleepless extends hero {
 					damageResult = this.calcDamage(target, this._currentStats.totalAttack * 1.85, 'mark', 'normal');
 					result += target.getDebuff(this, 'Round Mark', 1, { attackAmount: damageResult });
 
+					if (random() < 0.3) {
+						const healAmount = this.calcHeal(this, this._stats.totalHP * 0.10);
+						result += this.getHeal(this, healAmount);
+					}
+
 					break;
 				}
 			}
-		}
-
-		if (random() < 0.3) {
-			const healAmount = this.calcHeal(this, this._stats.totalHP * 0.10);
-			result += this.getHeal(this, healAmount);
 		}
 
 		return result;
@@ -4087,7 +4087,7 @@ class Sleepless extends hero {
 	endOfRound(roundNum) {
 		let result = '';
 
-		if (this._currentStats.totalHP <= 0 && this._currentStats['revive'] == 1) {
+		if (!this.alive && this._currentStats.revive == 1) {
 			for (const b in this._buffs) {
 				this.removeBuff(b);
 			}
@@ -4096,9 +4096,9 @@ class Sleepless extends hero {
 				this.removeDebuff(d);
 			}
 
-			this._currentStats['revive'] = 0;
+			this._currentStats.revive = 0;
 			this._currentStats.totalHP = this._stats.totalHP;
-			this._currentStats['energy'] = 0;
+			this._currentStats.energy = 0;
 			result += '<div>' + this.heroDesc() + ' has revived with full health.</div>';
 		}
 
@@ -4108,42 +4108,36 @@ class Sleepless extends hero {
 
 	doActive() {
 		let result = '';
-		let damageResult = {};
-		const targets = getAllTargets(this, this._enemies);
+		let damageResult;
+		let targets = getAllTargets(this, this._enemies);
 		let targetLock;
 
 		for (const i in targets) {
 			targetLock = targets[i].getTargetLock(this);
 			result += targetLock;
-
 			if (targetLock == '') {
 				damageResult = this.calcDamage(targets[i], this._currentStats.totalAttack, 'active', 'normal', 1.24);
 				result += targets[i].takeDamage(this, 'Sleepless Mark', damageResult);
 				activeQueue.push([this, targets[i], damageResult.damageAmount, damageResult.critted]);
-			}
 
-
-			targetLock = targets[i].getTargetLock(this);
-			result += targetLock;
-
-			if (targetLock == '') {
 				damageResult = this.calcDamage(targets[i], this._currentStats.totalAttack * 2.8, 'mark', 'normal');
 				result += targets[i].getDebuff(this, 'Round Mark', 1, { attackAmount: damageResult });
-			}
-
-
-			if (random() < 0.45) {
-				targetLock = targets[i].getTargetLock(this);
-				result += targetLock;
-
-				if (targetLock == '') {
-					damageResult = this.calcDamage(targets[i], this._currentStats.totalAttack * 2.1, 'mark', 'normal');
-					result += targets[i].getDebuff(this, 'Round Mark', 1, { attackAmount: damageResult });
-				}
 			}
 		}
 
 		result += this.getBuff(this, 'Damage Reduce', 3, { damageReduce: 0.15 });
+
+		if (random() < 0.45) {
+			targets = getRandomTargets(this, this._enemies, 1);
+			for (const t of targets) {
+				targetLock = t.getTargetLock(this);
+				result += targetLock;
+				if (targetLock == '') {
+					damageResult = this.calcDamage(t, this._currentStats.totalAttack * 2.1, 'mark', 'normal');
+					result += t.getDebuff(this, 'Round Mark', 1, { attackAmount: damageResult });
+				}
+			}
+		}
 
 		return result;
 	}

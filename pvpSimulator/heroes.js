@@ -741,40 +741,28 @@ class hero {
 
 		if (!this.alive) { return ''; }
 
-		let result = '';
+		let result;
 		let effectBeingHealed = 1 + this._currentStats.effectBeingHealed;
 		if (effectBeingHealed < 0) { effectBeingHealed = 0; }
 
 		amountHealed = Math.floor(amountHealed * effectBeingHealed);
 
-		if (!(isMonster(source)) && 'Healing Curse' in this._debuffs) {
+		if (!isMonster(source) && 'Healing Curse' in this._debuffs) {
 			const debuffKey = Object.keys(this._debuffs['Healing Curse'])[0];
 			const debuffStack = this._debuffs['Healing Curse'][debuffKey];
 			const damageResult = {};
 
-			result += '<div>Heal from ' + source.heroDesc() + ' blocked by <span class=\'skill\'>Healing Curse</span>.</div>';
+			result = '<div>Heal from ' + source.heroDesc() + ' blocked by <span class=\'skill\'>Healing Curse</span>.</div>';
 			result += this.removeDebuff('Healing Curse', debuffKey);
 
 			triggerQueue.push([debuffStack.source, 'addHurt', this, amountHealed, 'Healing Curse']);
 
 		} else {
-
-			result = '<div>' + source.heroDesc() + ' healed ';
-
-			// prevent overheal
-			if (this._currentStats.totalHP + amountHealed > this._stats.totalHP) {
-				this._currentStats.totalHP = this._stats.totalHP;
-			} else {
-				this._currentStats.totalHP += amountHealed;
-			}
-
+			amountHealed = Math.min(amountHealed, this._stats.totalHP - this._currentStats.totalHP);
+			this._currentStats.totalHP += amountHealed;
 			source._currentStats.damageHealed += amountHealed;
 
-			if (this === source) {
-				result += ' themself for ' + formatNum(amountHealed) + '.</div>';
-			} else {
-				result += this.heroDesc() + ' for ' + formatNum(amountHealed) + '.</div>';
-			}
+			result = '<div>' + source.heroDesc() + ' healed ' + (this === source ? 'self' : this.heroDesc()) + ' for ' + formatNum(amountHealed) + '.</div>';
 		}
 
 		return result;
