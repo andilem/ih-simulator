@@ -200,8 +200,8 @@ function logRanking(teams, heroRankings, generation, combatLog) {
 }
 
 async function findBestTeams() {
-	const generations = 10;
-	const population = 50;
+	const generations = 20;
+	const population = 40;
 	const keepBest = 20;
 	const generationsImproveBest = 5;
 	const generationsImproveNew = 10;
@@ -220,8 +220,8 @@ async function findBestTeams() {
 		}
 		console.log('Loaded ' + teams.length + ' teams');
 	}
-	let heroRankings = getHeroRankings(teams);
 
+	let heroRankings = getHeroRankings(teams);
 	logRanking(teams, heroRankings, 0, combatLog);
 
 	let newGen = loadTeams('newGen');
@@ -252,10 +252,11 @@ async function findBestTeams() {
 		await Promise.all(promises);
 
 		teams = selectBest(newGen, keepBest);
-		heroRankings = getHeroRankings(teams);
 		newGen = undefined;
+		deleteStorage('newGen');
 		saveTeams('teams', teams);
 
+		heroRankings = getHeroRankings(teams);
 		logRanking(teams, heroRankings, n, combatLog);
 	}
 }
@@ -280,10 +281,33 @@ function newGeneration(teams, size, keepBest, bestHeroes) {
 
 function selectBest(teams, num) {
 	if (num > teams.length) num = teams.length;
-	teams.sort((a, b) => b.wins / b.fights - a.wins / a.fights);
 
-	teams.length = num; //TODO preserve diversity
-	return teams;
+	const result = [];
+	const penalties = {};
+
+	while (result.length < num) {
+		for (const t of teams) {
+			let penalty = 0;
+			for (const h of t.heroes) {
+				const p = penalties[h.name];
+				if (p) penalty += p;
+			}
+			t.penalty = penalty;
+		}
+		teams.sort((a, b) => b.wins / b.fights - b.penalty - a.wins / a.fights + a.penalty);
+		const team = teams.shift();
+		for (const h of team.heroes) {
+			if (h.name in penalties) {
+				penalties[h.name] += 0.005;
+			} else {
+				penalties[h.name] = 0.005;
+			}
+		}
+		result.push(team);
+	}
+	result.sort((a, b) => b.wins / b.fights - a.wins / a.fights);
+
+	return result;
 }
 
 
