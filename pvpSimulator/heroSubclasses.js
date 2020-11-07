@@ -2171,7 +2171,7 @@ class Michelle extends hero {
 			this._currentStats.totalHP = this._stats.totalHP;
 			this._currentStats['energy'] = 100;
 			result += '<div>' + this.heroDesc() + ' has revived with full health and energy.</div>';
-			result += this.getBuff(this, 'Blaze of Seraph', 2, { attackAmount: this._currentStats.totalAttack });
+			result += this.getBuff(this, 'Blaze of Seraph', 2, { attackAmount: this._currentStats.totalAttack }, true);
 		}
 
 		return result;
@@ -2189,7 +2189,7 @@ class Michelle extends hero {
 				damageAmount = maxAmount;
 			}
 
-			const damageResult = this.calcDamage(e[i][1], damageAmount, 'passive', 'true');
+			const damageResult = this.calcDamage(e[i][1], damageAmount, 'passive', 'burnTrue', 1, 1, 2);
 			result += e[i][1].getDebuff(this, 'Burn True', 2, { burnTrue: damageResult.damageAmount }, false, 'passive');
 		}
 
@@ -2244,7 +2244,7 @@ class Michelle extends hero {
 
 		targets = getRandomTargets(this, this._allies, 1);
 		if (targets.length > 0) {
-			result += targets[0].getBuff(this, 'Blaze of Seraph', 3, { attackAmount: this._currentStats.totalAttack });
+			result += targets[0].getBuff(this, 'Blaze of Seraph', 3, { attackAmount: this._currentStats.totalAttack }, true);
 		}
 
 		return result;
