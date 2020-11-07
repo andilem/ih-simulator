@@ -39,7 +39,7 @@ class Task {
 
 const workerPool = {
 	id: 0,
-	maxSize: 4, //navigator.hardwareConcurrency,
+	maxSize: navigator.hardwareConcurrency,
 	workers: [],
 	available: [],
 	tasks: {},
@@ -240,6 +240,8 @@ async function findBestTeams() {
 		}
 		saveTeams('newGen', newGen);
 
+		const timeStart = Date.now();
+
 		const promises = [];
 		for (let i = newGen.length - 1; i >= 0; i--) {
 			if (newGen[i].fights == 0) {
@@ -250,6 +252,8 @@ async function findBestTeams() {
 			}
 		}
 		await Promise.all(promises);
+
+		console.log('Generation ' + n + ' optimized in ' + ((Date.now() - timeStart) / 60_000) + ' min');
 
 		teams = selectBest(newGen, keepBest);
 		newGen = undefined;
@@ -272,7 +276,7 @@ function newGeneration(teams, size, keepBest, bestHeroes) {
 	}
 	// remaining individuals: recombinations/mutations of best 
 	for (var c = keepBest; c < size; c++) {
-		newGen[c] = crossoverTeams(teams[randExp(teams.length, 0.9)], teams[randExp(teams.length, 0.9)], 2, bestHeroes);
+		newGen[c] = crossoverTeams(teams[randExp(teams.length, 0.9)], teams[randExp(teams.length, 0.9)], 1, bestHeroes);
 	}
 
 	return newGen;
