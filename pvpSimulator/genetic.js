@@ -101,7 +101,7 @@ const workerPool = {
 	}
 };
 
-random = rng(1);
+//random = rng(1);
 
 function randomTeam() {
 	return {
@@ -200,7 +200,7 @@ function logRanking(teams, heroRankings, generation, combatLog) {
 }
 
 async function findBestTeams() {
-	const generations = 20;
+	const generations = 100;
 	const population = 50;
 	const keepBest = 20;
 	const generationsImprove = 5;
@@ -252,7 +252,7 @@ async function findBestTeams() {
 		}
 		await Promise.all(promises);
 
-		console.log('Generation ' + n + ' optimized in ' + ((Date.now() - timeStart) / 60_000) + ' min');
+		console.log('Generation ' + n + ' optimized in ' + ((Date.now() - timeStart) / 60_000).toFixed(1) + ' min');
 
 		teams = selectBest(newGen, keepBest);
 		newGen = undefined;
@@ -466,5 +466,39 @@ function parseTeams() {
 		saveTeams('teams', teams);
 	} catch (e) {
 		combatLog.innerText = e;
+	}
+}
+
+
+async function optimizeTeam() {
+	const generationsImprove = 20;
+
+	const combatLog = document.getElementById('combatLog');
+	const teamInput = document.getElementById('teamInput');
+
+	let teams = loadTeams('teams');
+	if (!teams) {
+		combatLog.innerText = 'No teams found. Please import first.'
+		return;
+	} else {
+		console.log('Loaded ' + teams.length + ' teams');
+	}
+
+	let team;
+	try {
+		team = JSON.parse(teamInput.innerText);
+	} catch (e) {
+		combatLog.innerText = 'Cannot parse team: ' + e;
+		return;
+	}
+
+	let n = 0;
+	while (true) {
+		await workerPool.submit('improveTeam', { team: team, refs: teams, generations: generationsImprove }, data => {
+			team = data;
+			const msg = 'Generation ' + (++n) + ' best team:\n' + desc(team);
+			console.log(msg);
+			combatLog.innerText = msg;
+		});
 	}
 }

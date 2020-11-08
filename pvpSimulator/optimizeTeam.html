@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Idle Heroes Best Teams</title>
+
+  <link rel="stylesheet" type="text/css" href="style.css">
+
+  <script src="genetic.js"></script>
+</head>
+
+
+<body>
+  <div class="banner">
+    <div><a href="../index.html">Home</a></div>
+    <h1>Idle Heroes Optimize Team</h1>
+  </div>
+
+  <div>
+    <div class="log" id="combatLog" contenteditable="true"></div>
+    <div>
+      <!--label for="numSims">Number of Simulations to Run:</label>
+<input type="text" id="numSims" size="3" value="1" onchange="storeLocal(this);" /-->
+      <input type="submit" value="Run" onclick="optimizeTeam();"></input>
+      <input type="submit" value="Show teams" onclick="showTeams();"></input>
+      <input type="submit" value="Save teams" onclick="parseTeams();"></input>
+      <!--label for="domSeed">Seed:</label><input type="text" id="domSeed" size="15" value="0" /-->
+    </div>
+    <div>
+      <div class="log" id="teamInput" contenteditable="true"></div>
+    </div>
+  </div>
+</body>
+
+</html>
