@@ -25,12 +25,12 @@ onmessage = function (e) {
 	if (action == improveTeam.name) {
 		const team = deserializeTeam(data.team);
 		const refs = deserializeTeams(data.refs);
-		const generations = data.generations;
-		improveTeam(team, refs, generations, team => postMessage({
+		const options = data.options;
+		improveTeam(team, refs, team => postMessage({
 			id: id,
 			type: 'progress',
 			data: serializeTeam(team)
-		}));
+		}), options);
 		postMessage({
 			id: id,
 			type: 'result',
@@ -258,10 +258,17 @@ function deserializeTeams(data) {
 }
 
 
-function improveTeam(team, refs, generations, onNextGen) {
-	console.log('-- Improve team ' + team.shortDesc() + ' with ' + generations + ' generations');
-	const population = 10;
+function getOrDefault(value, def) {
+	return value != undefined ? value : def;
+}
+
+function improveTeam(team, refs, onNextGen, options) {
+	const generations = getOrDefault(options.generations, 10);
+	const population = getOrDefault(options.population, 10);
 	const eliteNum = 2;
+	const fightsPerMatchup = getOrDefault(options.fightsPerMatchup, 10);
+
+	console.log('-- Improve team ' + team.shortDesc() + ' with ' + generations + ' generations');
 
 	let teams = [team];
 
@@ -270,11 +277,11 @@ function improveTeam(team, refs, generations, onNextGen) {
 		const newGen = [];
 		// first eliteNum individuals: best teams
 		for (var c = 0; c < numElite; c++) {
-			newGen[c] = combineTeam(teams[c], teams[c], 0);
+			newGen[c] = combineTeam(teams[c], teams[c], 0, options);
 		}
 		// remaining individuals: recombinations/mutations of best 
 		for (var c = numElite; c < population; c++) {
-			newGen[c] = combineTeam(teams[randExp(teams.length, 0.8)], teams[randExp(teams.length, 0.8)], 3);
+			newGen[c] = combineTeam(teams[randExp(teams.length, 0.8)], teams[randExp(teams.length, 0.8)], 3, options);
 		}
 
 		teams = newGen;
@@ -285,8 +292,8 @@ function improveTeam(team, refs, generations, onNextGen) {
 		const num = teams.length * (2 * refs.length);
 		for (var i = 0; i < teams.length; i++) {
 			for (var j = 0; j < refs.length; j++) {
-				matchup(teams[i], refs[j]);
-				matchup(refs[j], teams[i]);
+				matchup(teams[i], refs[j], fightsPerMatchup);
+				matchup(refs[j], teams[i], fightsPerMatchup);
 				count += 2;
 			}
 			console.debug('Generation ' + n + ': ' + count + ' / ' + num + ' matchups done');
@@ -297,31 +304,31 @@ function improveTeam(team, refs, generations, onNextGen) {
 		for (var i = 0; i < eliteNum; i++) {
 			console.debug((i + 1) + '. ' + teams[i].desc());
 		}
-		if (onNextGen) {
-			onNextGen(teams[0]);
-		}
+		onNextGen(teams[0]);
 	}
 
-	// find best positions
-	teams.length = 1;
-	teams[0].resetStats();
-	for (var i = 1; i < population; i++) {
-		const newTeam = combineTeam(teams[0], teams[0], 0);
-		shuffle(newTeam.heroes);
-		for (const i in newTeam.heroes) {
-			newTeam.heroes[i]._heroPos = i;
+	if (!options.fixedPosition) {
+		// find best positions
+		teams.length = 1;
+		teams[0].resetStats();
+		for (var i = 1; i < population; i++) {
+			const newTeam = combineTeam(teams[0], teams[0], 0, options);
+			shuffle(newTeam.heroes);
+			for (const i in newTeam.heroes) {
+				newTeam.heroes[i]._heroPos = i;
+			}
+			teams[i] = newTeam;
 		}
-		teams[i] = newTeam;
-	}
-	let count = 0;
-	const num = teams.length * refs.length * 2;
-	for (var i = 0; i < teams.length; i++) {
-		for (var j = 0; j < refs.length; j++) {
-			matchup(teams[i], refs[j]);
-			matchup(refs[j], teams[i]);
-			count += 2;
+		let count = 0;
+		const num = teams.length * refs.length * 2;
+		for (var i = 0; i < teams.length; i++) {
+			for (var j = 0; j < refs.length; j++) {
+				matchup(teams[i], refs[j], fightsPerMatchup);
+				matchup(refs[j], teams[i], fightsPerMatchup);
+				count += 2;
+			}
+			console.debug('Improve positions: ' + count + ' / ' + num + ' matchups done');
 		}
-		console.debug('Improve positions: ' + count + ' / ' + num + ' matchups done');
 	}
 
 	teams.sort((a, b) => b.winRate() - a.winRate());
@@ -334,15 +341,15 @@ function improveTeam(team, refs, generations, onNextGen) {
 }
 
 
-function combineTeam(team1, team2, mutations) {
+function combineTeam(team1, team2, mutations, options) {
 	const result = new Team();
 
 	for (var i = 0; i < 6; i++) {
-		result.heroes[i] = copyHero(random() < 0.5 ? team1.heroes[i] : team2.heroes[i], mutations / 6);
+		result.heroes[i] = copyHero(random() < 0.5 ? team1.heroes[i] : team2.heroes[i], mutations / 6, options);
 	}
 
 	let monsterName;
-	if (random() < mutations / 6) {
+	if (!options.fixedMonster && random() < mutations / 6) {
 		monsterName = randomMonster();
 	} else {
 		monsterName = random() < 0.5 ? team1.monster._monsterName : team2.monster._monsterName;
@@ -353,26 +360,33 @@ function combineTeam(team1, team2, mutations) {
 }
 
 
-function copyHero(hero, mutations) {
+function copyHero(hero, mutations, options) {
 	const copy = new baseHeroStats[hero._heroName]['className'](hero._heroName, hero._heroPos, '');
 	copy._heroLevel = hero._heroLevel;
 
 	// possible mutations: gear, stone, artifact, skin, enable1..5
 	// mutate each with 12% (~1/8) probability per desired mutation
-	const mutationProb = mutations * 0.12;
-	if (random() < mutationProb * 3 / 2) {
+	let divisor = 0;
+	if (!options.fixedGear) divisor++;
+	if (!options.fixedStone) divisor++;
+	if (!options.fixedArtifact) divisor++;
+	if (!options.fixedSkin) divisor++;
+	if (!options.fixedEnables) divisor += 5;
+	const mutationProb = mutations / divisor;
+
+	if (!options.fixedGear && random() < mutationProb * 3 / 2) {
 		assignGear(copy, randomGear());
 	} else {
 		assignGear(copy, hero.gear);
 	}
-	if (random() < mutationProb) copy._stone = randomStone(); else copy._stone = hero._stone;
-	if (random() < mutationProb) copy._artifact = randomArtifact(copy._heroFaction); else copy._artifact = hero._artifact;
-	if (random() < mutationProb * 3 / 2) copy._skin = randomSkin(copy._heroName); else copy._skin = hero._skin;
-	if (random() < mutationProb * 3 / 2) copy._enable1 = E1[randInt(3)]; else copy._enable1 = hero._enable1;
-	if (random() < mutationProb * 3 / 2) copy._enable2 = E2[randInt(3)]; else copy._enable2 = hero._enable2;
-	if (random() < mutationProb * 3 / 2) copy._enable3 = E3[randInt(3)]; else copy._enable3 = hero._enable3;
-	if (random() < mutationProb * 3 / 2) copy._enable4 = E1[randInt(3)]; else copy._enable4 = hero._enable4;
-	if (random() < mutationProb * 2 / 1) copy._enable5 = E5[randInt(2)]; else copy._enable5 = hero._enable5;
+	if (!options.fixedStone && random() < mutationProb) copy._stone = randomStone(); else copy._stone = hero._stone;
+	if (!options.fixedArtifact && random() < mutationProb) copy._artifact = randomArtifact(copy._heroFaction); else copy._artifact = hero._artifact;
+	if (!options.fixedSkin && random() < mutationProb * 3 / 2) copy._skin = randomSkin(copy._heroName); else copy._skin = hero._skin;
+	if (!options.fixedEnables && random() < mutationProb * 3 / 2) copy._enable1 = E1[randInt(3)]; else copy._enable1 = hero._enable1;
+	if (!options.fixedEnables && random() < mutationProb * 3 / 2) copy._enable2 = E2[randInt(3)]; else copy._enable2 = hero._enable2;
+	if (!options.fixedEnables && random() < mutationProb * 3 / 2) copy._enable3 = E3[randInt(3)]; else copy._enable3 = hero._enable3;
+	if (!options.fixedEnables && random() < mutationProb * 3 / 2) copy._enable4 = E1[randInt(3)]; else copy._enable4 = hero._enable4;
+	if (!options.fixedEnables && random() < mutationProb * 2 / 1) copy._enable5 = E5[randInt(2)]; else copy._enable5 = hero._enable5;
 
 	return copy;
 }
@@ -400,26 +414,28 @@ function assignGear(hero, gear) {
 }
 
 
-function matchup(attTeam, defTeam) {
-	const numFights = 10;
-
+function matchup(attTeam, defTeam, numFights) {
 	if (attTeam === defTeam) throw 'A team cannot fight against itself';
 
-	for (const h of attTeam.heroes) {
-		h.setTeams(attTeam, defTeam);
-		h.updateCurrentStats(); // aura might have changed
-		h._attOrDef = 'att';
-	}
 	attTeam.monster.setTeams(attTeam, defTeam);
 	attTeam.monster._attOrDef = 'att';
-
-	for (const h of defTeam.heroes) {
-		h.setTeams(defTeam, attTeam);
-		h.updateCurrentStats(); // aura might have changed
-		h._attOrDef = 'def';
+	for (const h of attTeam.heroes) {
+		h.setTeams(attTeam, defTeam);
+		h._attOrDef = 'att';
 	}
+	for (const h of attTeam.heroes) {
+		h.updateCurrentStats(); // aura might have changed
+	}
+
 	defTeam.monster.setTeams(defTeam, attTeam);
 	defTeam.monster._attOrDef = 'def';
+	for (const h of defTeam.heroes) {
+		h.setTeams(defTeam, attTeam);
+		h._attOrDef = 'def';
+	}
+	for (const h of defTeam.heroes) {
+		h.updateCurrentStats(); // aura might have changed
+	}
 
 	const wins = runSims(attTeam, defTeam, numFights);
 	attTeam.fights += numFights;

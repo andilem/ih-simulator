@@ -244,7 +244,11 @@ async function findBestTeams() {
 		const promises = [];
 		for (let i = newGen.length - 1; i >= 0; i--) {
 			if (newGen[i].fights == 0) {
-				promises.push(workerPool.submit('improveTeam', { team: newGen[i], refs: teams, generations: generationsImprove }, data => {
+				promises.push(workerPool.submit('improveTeam', {
+					team: newGen[i], refs: teams, options: {
+						generations: generationsImprove
+					}
+				}, data => {
 					newGen[i] = data;
 					saveTeams('newGen', newGen);
 				}));
@@ -471,8 +475,6 @@ function parseTeams() {
 
 
 async function optimizeTeam() {
-	const generationsImprove = 20;
-
 	const combatLog = document.getElementById('combatLog');
 	const teamInput = document.getElementById('teamInput');
 
@@ -494,7 +496,17 @@ async function optimizeTeam() {
 
 	let n = 0;
 	while (true) {
-		await workerPool.submit('improveTeam', { team: team, refs: teams, generations: generationsImprove }, data => {
+		await workerPool.submit('improveTeam', {
+			team: team, refs: teams, options: {
+				generations: 10,
+				population: 10,
+				fightsPerMatchup: 20,
+				fixedPosition: true,
+				fixedMonster: true,
+				fixedGear: true,
+				fixedSkin: true,
+			}
+		}, data => {
 			team = data;
 			const msg = 'Generation ' + (++n) + ' best team:\n' + desc(team);
 			console.log(msg);
