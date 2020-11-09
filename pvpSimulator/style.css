@@ -54,19 +54,19 @@ h2, div, p {
 .accordion {
   color: #222;
   cursor: pointer;
-  padding: 18px;
+  padding: 4px;
   width: 100%;
   text-align: left;
   border: none;
   outline: none;
   font-weight: bold;
-  font-size: 15px;
+  font-size: 14px;
   transition: 0.4s;
 }
 
 .accordion:after {
   content: '\02795'; /* Unicode character for "plus" sign (+) */
-  font-size: 13px;
+  font-size: 14px;
   color: #000;
   float: right;
   margin-left: 5px;
@@ -97,7 +97,7 @@ h2, div, p {
 
 /* Style the accordion panel. Note: hidden by default */
 .panel {
-  padding: 0 18px;
+  padding: 0px 0px 0px 16px;
   background-color: #fae6be;
   overflow: hidden;
   max-height: 0;

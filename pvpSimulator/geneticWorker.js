@@ -266,7 +266,7 @@ function improveTeam(team, refs, onNextGen, options) {
 	const generations = getOrDefault(options.generations, 10);
 	const population = getOrDefault(options.population, 10);
 	const eliteNum = 2;
-	const fightsPerMatchup = getOrDefault(options.fightsPerMatchup, 10);
+	const fightsPerMatchup = getOrDefault(options.fightsPerMatchup, 20);
 
 	console.log('-- Improve team ' + team.shortDesc() + ' with ' + generations + ' generations');
 
@@ -281,7 +281,7 @@ function improveTeam(team, refs, onNextGen, options) {
 		}
 		// remaining individuals: recombinations/mutations of best 
 		for (var c = numElite; c < population; c++) {
-			newGen[c] = combineTeam(teams[randExp(teams.length, 0.8)], teams[randExp(teams.length, 0.8)], 3, options);
+			newGen[c] = combineTeam(teams[randExp(teams.length, 0.8)], teams[randExp(teams.length, 0.8)], 2, options);
 		}
 
 		teams = newGen;
