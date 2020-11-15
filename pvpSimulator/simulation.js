@@ -5,7 +5,7 @@ let logColor = 0;
 let roundNum = 0;
 let detailDesc = false;
 
-function runSims(attTeam, defTeam, numSims, seed) {
+function runSims(attTeam, defTeam, numSims, seed, finishEarly = 0) {
 	detailDesc = numSims == 1;
 	const oCombatLog = combatLog ? combatLog : document.getElementById('combatLog');
 	let winCount = 0;
@@ -42,7 +42,7 @@ function runSims(attTeam, defTeam, numSims, seed) {
 	}
 	defMonster.reset();
 
-	for (let simIterNum = 1; simIterNum <= numSims; simIterNum++) {
+	for (var simIterNum = 1; simIterNum <= numSims; simIterNum++) {
 		// @ start of single simulation
 
 		if (numSims == 1) { oCombatLog.innerHTML += '<p class =\'logSeg\'>Simulation #' + formatNum(simIterNum) + ' started.</p>'; }
@@ -387,7 +387,6 @@ function runSims(attTeam, defTeam, numSims, seed) {
 				break;
 			}
 
-
 			// @ end of round
 			roundNum++;
 		}
@@ -421,6 +420,18 @@ function runSims(attTeam, defTeam, numSims, seed) {
 		if (numSims == 1) { oCombatLog.innerHTML += '<p class=\'logSeg\'>Simulation #' + formatNum(simIterNum) + ' Ended.</p>'; }
 
 		// @ end of simulation
+
+		// finish early if all n fights are won or lost
+		if (simIterNum == finishEarly) {
+			if (winCount == 0) {
+				//console.debug('Finish early: first ' + finishEarly + ' fights all lost');
+				simIterNum = numSims;
+			} else if (winCount == simIterNum) {
+				//console.debug('Finish early: first ' + finishEarly + ' fights all won');
+				simIterNum = numSims;
+				winCount = numSims;
+			}
+		}
 	}
 
 	oCombatLog.innerHTML += '<p class=\'logSeg\'>Attacker won ' + winCount + ' out of ' + numSims + ' (' + formatNum((winCount / numSims * 100).toFixed(2)) + '%).</p>';

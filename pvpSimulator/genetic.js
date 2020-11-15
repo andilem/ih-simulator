@@ -125,9 +125,11 @@ function randomMonster() {
 	return keys[randInt(keys.length)];
 }
 
-function randomHero() {
-	const keys = Object.keys(baseHeroStats).filter(s => s != 'None');
-	const name = keys[randInt(keys.length)];
+function randomHero(name) {
+	if (!name) {
+		const keys = Object.keys(baseHeroStats).filter(s => s != 'None');
+		name = keys[randInt(keys.length)];
+	}
 	const hero = {
 		name: name,
 		gear: randomGear(),
@@ -267,6 +269,15 @@ function logRanking(rankings, refs, generation, combatLog) {
 		expandArtifacts.innerText += msg + '\n';
 	}
 
+	msg = '===== MONSTER RANKING =====';
+	logMsg += '\n' + msg;
+	const expandMonsters = createExpandableDiv(expandGen, msg);
+	for (var i = 0; i < rankings.monsters.length; i++) {
+		msg = (i + 1) + '. ' + rankings.monsters[i].name + ' - ' + rankings.monsters[i].points;
+		logMsg += '\n' + msg;
+		expandMonsters.innerText += msg + '\n';
+	}
+
 	msg = '===== SOME DIVERSE TEAMS =====';
 	logMsg += '\n' + msg;
 	const expandTeams = createExpandableDiv(expandGen, msg);
@@ -282,9 +293,11 @@ function logRanking(rankings, refs, generation, combatLog) {
 
 async function findBestTeams() {
 	const generations = 100;
-	const population = 100;
+	const population = 40;
+	const keepBest = 10;
 	const numRefs = 20;
 	const generationsImprove = 5;
+	const fightsPerMatchup = 10;
 
 	const combatLog = document.getElementById('combatLog');
 
@@ -306,7 +319,7 @@ async function findBestTeams() {
 	if (teams) {
 		if (teams.length > population) teams.length = population;
 		console.log('Loaded generation 0 with ' + teams.length + ' teams');
-		rankings = getRankings(refs);
+		rankings = getRankings(teams);
 		logRanking(rankings, refs, 0, combatLog);
 	}
 
@@ -322,7 +335,7 @@ async function findBestTeams() {
 	// evolve
 	for (var n = 1; n <= generations; n++) {
 		if (n > 1 || !teams) {
-			teams = newGeneration(teams || refs, population, 3, rankings);
+			teams = newGeneration(teams || refs, population, keepBest, rankings);
 			console.log('Created generation ' + n + ' with ' + teams.length + ' teams');
 			saveTeams('teams.new', teams);
 		}
@@ -334,7 +347,7 @@ async function findBestTeams() {
 		for (let i = 0; i < teams.length; i++) {
 			if (teams[i].fights == 0) {
 				promises.push(workerPool.submit('improveTeam', {
-					team: teams[i], refs: refs, options: { generations: generationsImprove }
+					team: teams[i], refs: refs, options: { generations: generationsImprove, fightsPerMatchup: fightsPerMatchup }
 				}, () => {
 					console.log(++count + ' / ' + teams.length + ' teams optimized');
 				}, data => {
@@ -351,14 +364,6 @@ async function findBestTeams() {
 		console.log('Generation ' + n + ' optimized in ' + ((Date.now() - timeStart) / 60_000).toFixed(1) + ' min');
 
 		teams.sort((a, b) => b.wins / b.fights - a.wins / a.fights);
-
-		// ensure diversity 2
-		const newTeams = [];
-		for (const t of teams) {
-			if (newTeams.every(n => isDiverse(n, t, 2))) newTeams.push(t);
-		}
-		teams = newTeams;
-
 		saveTeams('teams', teams);
 		deleteStorage('teams.new');
 		rankings = getRankings(teams);
@@ -371,23 +376,99 @@ async function findBestTeams() {
 
 function newGeneration(teams, size, keepBest, rankings) {
 	if (keepBest > teams.length) keepBest = teams.length;
-
 	const newGen = [];
+
 	// first keepBest individuals: best teams
 	for (var c = 0; c < keepBest; c++) {
-		newGen[c] = crossoverTeams(teams[c], teams[c], 0, rankings);
-	}
-	// remaining individuals: recombinations/mutations of best 
-	for (var c = keepBest; c < size * 1.5; c++) { // generate some more because duplicates are removed below
-		newGen[c] = crossoverTeams(teams[randExp(teams.length, 0.9)], teams[randExp(teams.length, 0.9)], 1, rankings);
+		newGen[c] = copyTeam(teams[c]);
 	}
 
+	// only teams with diversity 3 are eligible for selection
+	/*const selectable = [];
+	for (const t of teams) {
+		if (selectable.every(n => isDiverse(n, t, 3))) selectable.push(t);
+	}*/
+
+	// remaining individuals: recombinations/mutations
+	for (var c = keepBest; c < size * 1.2; c++) { // generate some more because duplicates are removed below
+		//newGen[c] = crossoverTeams(selectable[randExp(selectable.length, 0.9)], selectable[randExp(selectable.length, 0.9)], 1, rankings);
+		newGen[c] = createGoodTeam(1, rankings);
+	}
+
+	// remove teams with same heroes (diversity 0)
 	const result = [];
 	for (const t of newGen) {
 		if (result.length < size && result.every(r => isDiverse(r, t, 1))) result.push(t);
 	}
 
 	return result;
+}
+
+function copyTeam(team) {
+	return {
+		heroes: Array.from(team.heroes, h => Object.assign({}, h)),
+		monster: team.monster,
+		fights: 0,
+		wins: 0,
+	};
+}
+
+/*function crossoverTeams(team1, team2, mutations, rankings) {
+	const result = {
+		heroes: [],
+		monster: random() < 0.5 ? team1.monster : team2.monster,
+		fights: 0,
+		wins: 0,
+	};
+	for (var i = 0; i < 6; i++) {
+		if (random() < mutations / 6) {
+			const hero = randomHero();
+			const heroRanking = rankings ? rankings.heroes[hero.name] : null;
+			if (heroRanking && random() < 0.5) {
+				hero.gear = heroRanking.gears[randExp(heroRanking.gears.length, 0.7)].name;
+				hero.stone = heroRanking.stones[randExp(heroRanking.stones.length, 0.7)].name;
+				hero.artifact = heroRanking.artifacts[randExp(heroRanking.artifacts.length, 0.7)].name;
+				hero.skin = heroRanking.skins[randExp(heroRanking.skins.length, 0.7)].name;
+				const enables = heroRanking.enables[randExp(heroRanking.enables.length, 0.7)].name;
+				hero.E1 = parseInt(enables.charAt(0));
+				hero.E2 = parseInt(enables.charAt(1));
+				hero.E3 = parseInt(enables.charAt(2));
+				hero.E4 = parseInt(enables.charAt(3));
+				hero.E5 = parseInt(enables.charAt(4));
+			}
+			result.heroes[i] = hero;
+		} else {
+			result.heroes[i] = Object.assign({}, random() < 0.5 ? team1.heroes[i] : team2.heroes[i]);
+		}
+	}
+	return result;
+}*/
+
+function createGoodTeam(mutations, rankings) {
+	const team = {
+		heroes: [],
+		monster: !rankings || random() < mutations / 6 ? randomMonster() : rankings.monsters[randExp(rankings.monsters.length, 0.7)].name,
+		fights: 0,
+		wins: 0,
+	};
+	for (var i = 0; i < 6; i++) {
+		const hero = randomHero(!rankings || random() < mutations / 6 ? null : rankings.heroes[randExp(rankings.heroes.length, 0.8)].hero);
+		const heroRanking = rankings ? rankings.heroes[hero.name] : null;
+		if (heroRanking) {
+			hero.gear = heroRanking.gears[randExp(heroRanking.gears.length, 0.7)].name;
+			hero.stone = heroRanking.stones[randExp(heroRanking.stones.length, 0.7)].name;
+			hero.artifact = heroRanking.artifacts[randExp(heroRanking.artifacts.length, 0.7)].name;
+			hero.skin = heroRanking.skins[randExp(heroRanking.skins.length, 0.7)].name;
+			const enables = heroRanking.enables[randExp(heroRanking.enables.length, 0.7)].name;
+			hero.E1 = parseInt(enables.charAt(0));
+			hero.E2 = parseInt(enables.charAt(1));
+			hero.E3 = parseInt(enables.charAt(2));
+			hero.E4 = parseInt(enables.charAt(3));
+			hero.E5 = parseInt(enables.charAt(4));
+		}
+		team.heroes[i] = hero;
+	}
+	return team;
 }
 
 function getRefs(teams, num) {
@@ -456,9 +537,12 @@ function getSortedRankings(scores) {
 function getRankings(teams) {
 	const heroScores = {};
 	const artifactScores = {};
+	const monsterScores = {};
 	for (var i = 0; i < teams.length; i++) {
+		const team = teams[i];
 		const points = teams.length - i;
-		for (const h of teams[i].heroes) {
+		if (team.monster in monsterScores) monsterScores[team.monster] += points; else monsterScores[team.monster] = points;
+		for (const h of team.heroes) {
 			if (h.artifact in artifactScores) artifactScores[h.artifact] += points; else artifactScores[h.artifact] = points;
 			let heroScore = heroScores[h.name];
 			if (!heroScore) {
@@ -498,45 +582,14 @@ function getRankings(teams) {
 	heroRankings.sort((a, b) => b.points - a.points);
 
 	const artifactRankings = getSortedRankings(artifactScores);
+	const monsterRankings = getSortedRankings(monsterScores);
 
 	return {
 		heroes: heroRankings,
 		artifacts: artifactRankings,
+		monsters: monsterRankings,
 	};
 }
-
-
-function crossoverTeams(team1, team2, mutations, rankings) {
-	const result = {
-		heroes: [],
-		monster: random() < 0.5 ? team1.monster : team2.monster,
-		fights: 0,
-		wins: 0,
-	};
-	for (var i = 0; i < 6; i++) {
-		if (random() < mutations / 6) {
-			const hero = randomHero();
-			const heroRanking = rankings ? rankings.heroes[hero.name] : null;
-			if (heroRanking && random() < 0.5) {
-				hero.gear = heroRanking.gears[randExp(heroRanking.gears.length, 0.7)].name;
-				hero.stone = heroRanking.stones[randExp(heroRanking.stones.length, 0.7)].name;
-				hero.artifact = heroRanking.artifacts[randExp(heroRanking.artifacts.length, 0.7)].name;
-				hero.skin = heroRanking.skins[randExp(heroRanking.skins.length, 0.7)].name;
-				const enables = heroRanking.enables[randExp(heroRanking.enables.length, 0.7)].name;
-				hero.E1 = parseInt(enables.charAt(0));
-				hero.E2 = parseInt(enables.charAt(1));
-				hero.E3 = parseInt(enables.charAt(2));
-				hero.E4 = parseInt(enables.charAt(3));
-				hero.E5 = parseInt(enables.charAt(4));
-			}
-			result.heroes[i] = hero;
-		} else {
-			result.heroes[i] = Object.assign({}, random() < 0.5 ? team1.heroes[i] : team2.heroes[i]);
-		}
-	}
-	return result;
-}
-
 
 function saveTeams(key, data) {
 	if (typeof (Storage) === undefined) {
@@ -657,7 +710,7 @@ async function optimizeTeam() {
 			team: team, refs: refs, options: {
 				generations: 10,
 				population: 10,
-				fightsPerMatchup: 20,
+				fightsPerMatchup: 50,
 				fixedPosition: true,
 				fixedMonster: true,
 				fixedGear: true,

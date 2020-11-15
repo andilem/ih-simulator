@@ -437,7 +437,7 @@ function matchup(attTeam, defTeam, numFights) {
 		h.updateCurrentStats(); // aura might have changed
 	}
 
-	const wins = runSims(attTeam, defTeam, numFights);
+	const wins = runSims(attTeam, defTeam, numFights, undefined, 10);
 	attTeam.fights += numFights;
 	attTeam.wins += wins;
 	defTeam.fights += numFights;
